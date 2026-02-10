@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서비스사업부 통합 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+
+    <div class="flex h-screen">
+        <aside class="w-64 bg-slate-900 text-white hidden md:flex flex-col">
+            <div class="p-6 text-2xl font-bold border-b border-slate-700">Service BI</div>
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" class="block p-3 bg-blue-600 rounded-lg text-sm"><i class="fas fa-chart-line mr-2"></i> 실적 대시보드</a>
+                <a href="#" class="block p-3 hover:bg-slate-800 rounded-lg text-sm text-slate-400"><i class="fas fa-users mr-2"></i> 협력사 관리</a>
+                <a href="#" class="block p-3 hover:bg-slate-800 rounded-lg text-sm text-slate-400"><i class="fas fa-database mr-2"></i> Raw 데이터</a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-8">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-2xl font-bold">2025 서비스 실적 현황</h1>
+                    <p class="text-slate-500 text-sm">데이터 업데이트: <span id="update-time">실시간 연동 중</span></p>
+                </div>
+                <button onclick="fetchData()" class="bg-white border px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition">
+                    <i class="fas fa-sync-alt mr-1"></i> 데이터 새로고침
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 text-center">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <p class="text-slate-500 text-xs font-semibold mb-1 uppercase">올해 목표 달성률</p>
+                    <div class="text-3xl font-bold text-blue-600" id="kpi-target">25.1%</div>
+                    <div class="w-full bg-gray-100 h-2 rounded-full mt-3">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: 25%"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <p class="text-slate-500 text-xs font-semibold mb-1 uppercase">누적 견적 건수</p>
+                    <div class="text-3xl font-bold" id="kpi-count">125건</div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <p class="text-slate-500 text-xs font-semibold mb-1 uppercase">평균 수주율</p>
+                    <div class="text-3xl font-bold text-green-500" id="kpi-rate">45.8%</div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <p class="text-slate-500 text-xs font-semibold mb-1 uppercase">누적 매출 (실행가 기준)</p>
+                    <div class="text-3xl font-bold text-indigo-600" id="kpi-revenue">1,830M</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold mb-6 italic text-slate-700">유입경로별 수주 및 전환율</h3>
+                    <canvas id="conversionChart" height="220"></canvas>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold mb-6 italic text-slate-700">협력사별 수주 기여도</h3>
+                    <div class="flex justify-center">
+                        <div style="width: 280px;"><canvas id="partnerChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
+                    <h3 class="font-bold">최근 수주 현황</h3>
+                    <span class="text-xs text-blue-600 font-bold">TOP 5 리스트</span>
+                </div>
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 text-slate-500 text-xs">
+                        <tr>
+                            <th class="p-4 border-b">수요처</th>
+                            <th class="p-4 border-b">서비스유형</th>
+                            <th class="p-4 border-b">견적가</th>
+                            <th class="p-4 border-b">상태</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table" class="text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 시트 CSV 링크 (웹에 게시 후 가져온 URL)
+        // 아래 주소는 예시이며, 실제 시트에서 '웹에 게시' 후 CSV 주소를 넣으시면 바로 연동됩니다.
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2r6ECCcoENp7rXu4hRVwOqiskGUvlR-IquEBC98LSK-348IUuaOqxwal_deDWtWCB3sLT9N9ta2tn/pub?output=csv';
+
+        function initCharts(data) {
+            // 1. 유입경로 차트
+            const ctx1 = document.getElementById('conversionChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['홈페이지', '유통망', '기존고객', '브랜드발굴', '지인'],
+                    datasets: [{
+                        label: '수주율 (%)',
+                        data: [31.8, 48.9, 58.3, 67.1, 41.2],
+                        backgroundColor: '#3b82f6'
+                    }]
+                }
+            });
+
+            // 2. 협력사 차트
+            const ctx2 = document.getElementById('partnerChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['에이원', 'HS코리아', '대한글로비', '자체'],
+                    datasets: [{
+                        data: [35, 25, 20, 20],
+                        backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#ef4444']
+                    }]
+                }
+            });
+        }
+
+        // 테이블 샘플 데이터 채우기
+        function fillTable() {
+            const table = document.getElementById('data-table');
+            const samples = [
+                ['국립민속박물관', '통합유지보수', '45,000,000', '수주완료'],
+                ['코스모신소재', '시스템 구축', '120,000,000', '진행중'],
+                ['한국교통안전공단', '기술지원', '12,500,000', '수주완료'],
+                ['삼성SDI', '정기점검', '8,000,000', '견적제출'],
+            ];
+            
+            table.innerHTML = samples.map(row => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 border-b font-medium">${row[0]}</td>
+                    <td class="p-4 border-b text-slate-600">${row[1]}</td>
+                    <td class="p-4 border-b">₩${row[2]}</td>
+                    <td class="p-4 border-b">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${row[3] === '수주완료' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                            ${row[3]}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.onload = () => {
+            initCharts();
+            fillTable();
+            document.getElementById('update-time').innerText = new Date().toLocaleString();
+        };
+    </script>
+</body>
+</html>
