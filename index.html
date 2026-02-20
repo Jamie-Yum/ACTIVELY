@@ -1488,10 +1488,25 @@ body.ui-dark #screen-participant { background: var(--off); }
 
       <!-- QUIZ -->
       <div class="activity-panel" id="ap-quiz">
-        <div class="card">
+        <div class="card" id="quiz-edit-card">
           <div class="card-header">
             <div class="card-header-icon">🎯</div>
-            <div class="card-title">퀴즈</div>
+            <div class="card-title">퀴즈 문제 편집</div>
+          </div>
+          <div class="card-body">
+            <div id="quizEditList"></div>
+            <button class="btn-add-opt" onclick="addQuizQuestion()" style="margin-top:8px;">+ 문제 추가</button>
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn-launch" onclick="launchQuizToParticipants()">▶ 퀴즈 시작 (참여자 전송)</button>
+              <button class="btn-outline" onclick="loadDefaultQuiz()">🔄 기본 문제 불러오기</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="quiz-live-card" style="display:none">
+          <div class="card-header">
+            <div class="card-header-icon">🎯</div>
+            <div class="card-title">퀴즈 진행 중</div>
+            <div class="live-badge"><div class="live-dot-red"></div> LIVE</div>
           </div>
           <div class="card-body" id="quizBody"></div>
         </div>
@@ -1686,9 +1701,11 @@ body.ui-dark #screen-participant { background: var(--off); }
       <div id="pNicknameBadge" style="display:none;font-size:12px;font-weight:700;color:var(--theme-a);background:var(--theme-l);padding:4px 12px;border-radius:100px;"></div>
       <div class="live-badge"><div class="live-dot-red"></div> 연결됨</div>
     </div>
-    <button class="btn-sm btn-ghost" onclick="closeParticipant()">← 나가기</button>
   </div>
 
+  <div id="pSessionTitleBanner" style="display:none;background:var(--theme-l);border-bottom:2px solid var(--theme-a);padding:14px 20px;text-align:center;">
+    <div id="pSessionTitleBannerText" style="font-size:22px;font-weight:900;color:var(--theme-h);letter-spacing:-0.5px;"></div>
+  </div>
   <div class="participant-body">
     <div class="p-context-label" id="pContextLabel">🎓 강의/교육</div>
     <div class="p-card">
@@ -1911,6 +1928,13 @@ async function initHostSession(c, initialAct) {
   }
 }
 
+// 참여자 상태
+let pVoted = false;
+let pLastQuizTs = null;
+let pCurrentQuizQuestions = [];
+let pQuizScore = 0;
+let pQuizAnswered = false;
+
 async function joinSessionFirebase(code) {
   if (!db) return false;
   try {
@@ -1918,23 +1942,129 @@ async function joinSessionFirebase(code) {
     if (!snap.exists()||!snap.val().active) return false;
     roomCode=code; ctx=snap.val().ctx||'edu'; isHost=false;
     setParticipantSessionTitle(snap.val().title||'');
-    // Keep participant header title synced
+    setTheme(ctx);
     db.ref(`sessions/${code}/title`).on('value', s=>setParticipantSessionTitle(s.val()||''));
     await db.ref(`sessions/${code}/participants`).transaction(n=>(n||0)+1);
-    db.ref(`sessions/${code}/activeActivity`).on('value', s=>{ if(s.val()) updateParticipantView(s.val()); });
-    db.ref(`sessions/${code}/poll`).on('value', s=>{
-      const d=s.val(); if(d&&d.live){ document.getElementById('pTitle').textContent=d.q; document.getElementById('pContent').innerHTML=(d.opts||[]).map((o,i)=>`<button class="v-btn" style="width:100%;margin-bottom:8px" onclick="participantVote('${code}',${i},'${o}')">${o}</button>`).join(''); }
+
+    // 발표자 탭 전환 → 참여자 화면 즉시 전환
+    db.ref(`sessions/${code}/activeActivity`).on('value', s=>{
+      const act = s.val(); if(!act) return;
+      if(act==='poll'){
+        // 투표 live 여부는 poll 리스너가 처리, 여기선 대기 화면만
+        db.ref(`sessions/${code}/poll`).once('value').then(ps=>{
+          const d=ps.val();
+          const pTitle=document.getElementById('pTitle');
+          const pContent=document.getElementById('pContent');
+          if(!pTitle||!pContent) return;
+          if(!d||!d.live){
+            pTitle.textContent='실시간 투표';
+            pContent.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 투표를 시작하면 여기에 표시됩니다.</div>';
+          }
+        });
+      } else if(act==='quiz'||act==='quiz_edit'){
+        const pTitle=document.getElementById('pTitle');
+        const pContent=document.getElementById('pContent');
+        if(!pTitle||!pContent) return;
+        pTitle.textContent='퀴즈';
+        pContent.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 퀴즈를 시작하면 여기에 표시됩니다.</div>';
+      } else {
+        pVoted=false;
+        updateParticipantView(act);
+      }
     });
+
+    // 투표 실시간 리스너
+    db.ref(`sessions/${code}/poll`).on('value', s=>{
+      const d=s.val(); if(!d) return;
+      const pTitle=document.getElementById('pTitle');
+      const pContent=document.getElementById('pContent');
+      if(!pTitle||!pContent) return;
+      if(d.live){
+        if(pVoted){
+          const votes=d.votes||{};
+          const total=Object.values(votes).reduce((a,b)=>a+b,0)||1;
+          pTitle.textContent=d.q||'투표';
+          pContent.innerHTML=(d.opts||[]).map((o,i)=>{
+            const v=votes[i]||0; const pct=Math.round(v/total*100);
+            return '<div style="margin-bottom:12px;">'+
+              '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px;">'+
+              '<span>'+o+'</span><span style="color:var(--theme-a);font-weight:700;">'+pct+'%</span></div>'+
+              '<div style="height:10px;background:var(--off2);border-radius:100px;overflow:hidden;">'+
+              '<div style="width:'+pct+'%;height:100%;background:var(--theme-g);border-radius:100px;transition:width 0.6s ease;"></div></div>'+
+              '<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+v+'표</div></div>';
+          }).join('')+'<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:10px;padding:10px;background:var(--off);border-radius:10px;">✅ 투표 완료 · 총 '+total+'표 집계 중</div>';
+        } else {
+          pTitle.textContent=d.q||'투표';
+          pContent.innerHTML=(d.opts||[]).map((o,i)=>
+            '<button class="v-btn" style="width:100%;margin-bottom:10px;padding:15px;font-size:14px;font-weight:700;text-align:left;border-radius:12px;" '+
+            'onclick="participantVote(\''+code+'\','+i+',this)">'+o+'</button>'
+          ).join('')+'<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:6px;">하나를 선택하면 자동으로 제출됩니다</div>';
+        }
+      } else { pVoted=false; }
+    });
+
+    // 퀴즈 실시간 리스너
+    db.ref(`sessions/${code}/quiz`).on('value', s=>{
+      const d=s.val();
+      if(d&&d.started&&Array.isArray(d.questions)&&d.questions.length>0){
+        if(d.ts!==pLastQuizTs){
+          pLastQuizTs=d.ts; pQuizScore=0; pQuizAnswered=false;
+          pCurrentQuizQuestions=d.questions;
+          renderParticipantQuiz(code,d.questions,0);
+        }
+      }
+    });
+
     return true;
-  } catch(e) { return false; }
+  } catch(e){ console.error(e); return false; }
 }
 
-async function participantVote(code,optIdx,optName) {
-  if (!db) return;
+async function participantVote(code,optIdx,btnEl) {
+  if(!db||pVoted) return;
+  pVoted=true;
+  document.querySelectorAll('#pContent .v-btn').forEach(b=>{b.disabled=true;b.style.opacity='0.4';});
+  if(btnEl&&btnEl.style){btnEl.style.opacity='1';btnEl.style.borderColor='var(--theme-a)';btnEl.style.background='var(--theme-l)';}
   await db.ref(`sessions/${code}/poll/votes/${optIdx}`).transaction(n=>(n||0)+1);
   await db.ref(`sessions/${code}/responses`).transaction(n=>(n||0)+1);
-  document.querySelectorAll('#pContent .v-btn').forEach(b=>{b.disabled=true;b.style.opacity='0.5';});
-  addFeed(`"${optName}" 에 투표했습니다`,'#22a05a');
+}
+
+function renderParticipantQuiz(code,questions,qIdx){
+  const pTitle=document.getElementById('pTitle');
+  const pContent=document.getElementById('pContent');
+  if(!pTitle||!pContent) return;
+  pCurrentQuizQuestions=questions;
+  if(qIdx>=questions.length){
+    const pct=Math.round(pQuizScore/questions.length*100);
+    pTitle.textContent='퀴즈 완료!';
+    pContent.innerHTML='<div style="text-align:center;padding:24px 0;">'+
+      '<div style="font-size:56px;margin-bottom:10px;">'+(pct>=80?'🏆':pct>=60?'👍':'💪')+'</div>'+
+      '<div style="font-size:24px;font-weight:900;color:var(--theme-a);margin-bottom:6px;">'+pQuizScore+' / '+questions.length+' 정답</div>'+
+      '<div style="font-size:15px;color:var(--muted);">정답률 '+pct+'%</div></div>';
+    return;
+  }
+  const q=questions[qIdx]; pQuizAnswered=false;
+  pTitle.textContent='Q'+(qIdx+1)+' / '+questions.length;
+  pContent.innerHTML='<div style="font-size:16px;font-weight:800;margin-bottom:16px;line-height:1.5;color:var(--text);">'+q.q+'</div>'+
+    q.opts.map((o,i)=>
+      '<button id="pqo'+i+'" onclick="answerParticipantQuiz('+i+','+q.correct+',\''+code+'\','+qIdx+')" '+
+      'style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-size:14px;font-weight:600;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;">'+
+      '<span style="width:28px;height:28px;border-radius:7px;background:var(--off2);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">'+'ABCD'[i]+'</span>'+o+'</button>'
+    ).join('');
+}
+
+function answerParticipantQuiz(chosen,correct,code,qIdx){
+  if(pQuizAnswered) return; pQuizAnswered=true;
+  document.querySelectorAll('#pContent button').forEach(b=>{b.style.pointerEvents='none';b.style.cursor='default';});
+  const cb=document.getElementById('pqo'+chosen);
+  const rb=document.getElementById('pqo'+correct);
+  if(chosen===correct){
+    pQuizScore++;
+    if(cb){cb.style.borderColor='#22a05a';cb.style.background='#e6f7ee';cb.style.color='#1a6b3a';}
+  } else {
+    if(cb){cb.style.borderColor='#e05050';cb.style.background='#fdeaea';cb.style.color='#b03030';}
+    if(rb){rb.style.borderColor='#22a05a';rb.style.background='#e6f7ee';rb.style.color='#1a6b3a';}
+  }
+  setTimeout(()=>renderParticipantQuiz(code,pCurrentQuizQuestions,qIdx+1),2200);
 }
 
 // ============================================================
@@ -2081,7 +2211,14 @@ function switchActivity(act,btn) {
   if(actBtns[idx]) actBtns[idx].classList.add('active');
   const navTabs=document.querySelectorAll('.nav-tabs .nav-tab');
   if(navTabs[idx]) navTabs[idx].classList.add('active');
-  if(isHost&&db&&roomCode) db.ref(fbPath('activeActivity')).set(act);
+  if(isHost&&db&&roomCode){
+    if(act==='quiz'){
+      const liveCard=document.getElementById('quiz-live-card');
+      db.ref(fbPath('activeActivity')).set(liveCard&&liveCard.style.display!=='none'?'quiz':'quiz_edit');
+    } else {
+      db.ref(fbPath('activeActivity')).set(act);
+    }
+  }
 }
 
 // ============================================================
@@ -2095,8 +2232,9 @@ async function launchPoll() {
   const opts=Array.from(document.querySelectorAll('#pollOpts input')).map(i=>i.value.trim()).filter(Boolean);
   if(!q||opts.length<2) return;
   pollData={q,opts,votes:opts.map(()=>0)}; pollLive=true;
-  const ok=await fbSet('poll',{live:true,q,opts,votes:opts.reduce((acc,_,i)=>({...acc,[i]:0}),{})});
-  addFeed(ok?`🔥 투표 Firebase 게시됨: "${q}"`:`투표 시작: "${q}"`,'var(--theme-a)');
+  await fbSet('poll',{live:true,q,opts,votes:opts.reduce((acc,_,i)=>({...acc,[i]:0}),{})});
+  if(db&&roomCode) await db.ref(fbPath('activeActivity')).set('poll');
+  addFeed(`🔥 투표 시작! 참여자에게 전송됨: "${q}"`,'var(--theme-a)');
   document.getElementById('poll-edit-card').style.display='none';
   document.getElementById('poll-result-card').style.display='';
   document.getElementById('pr-question').textContent=q;
@@ -2202,26 +2340,97 @@ function filterQA(f) {
 }
 
 // ============================================================
-//   QUIZ
+//   QUIZ — 호스트 편집 + Firebase 참여자 전송
 // ============================================================
-function renderQuiz() {
-  const body=document.getElementById('quizBody'); if(!body) return;
-  const qs=quizzes[ctx]||quizzes.edu;
-  if(quizIdx>=qs.length){ const pct=Math.round(quizScore/qs.length*100); body.innerHTML=`<div class="quiz-result"><div class="quiz-result-score" style="color:var(--theme-a)">${quizScore}/${qs.length}</div><div class="quiz-result-label">${pct>=80?'🏆 훌륭합니다!':pct>=60?'👍 잘 하셨어요!':'💪 다시 도전!'}</div><div style="font-size:14px;color:var(--muted);margin-bottom:24px">정답률 ${pct}%</div><button class="btn-launch" onclick="restartQuiz()">처음부터 다시</button></div>`; return; }
-  const q=qs[quizIdx]; quizAnswered=false;
-  body.innerHTML=`<div class="quiz-header"><div class="quiz-progress">문제 ${quizIdx+1} / ${qs.length}</div><div class="quiz-score-badge">점수 ${quizScore}점</div></div><div class="timer-track"><div class="timer-bar" id="timerBar" style="width:100%"></div></div><div class="quiz-q">${q.q}</div><div class="quiz-opts">${q.opts.map((o,i)=>`<div class="q-opt" id="qo${i}" onclick="answerQuiz(${i})"><div class="q-opt-key">${'ABCD'[i]}</div>${o}</div>`).join('')}</div>`;
-  updateCount('cnt-quiz',quizIdx+1);
-  const bar=document.getElementById('timerBar');
-  if(bar){bar.style.transition='width 15s linear';setTimeout(()=>bar.style.width='0%',50);setTimeout(()=>{if(!quizAnswered){document.querySelectorAll('.q-opt').forEach(b=>b.style.pointerEvents='none');const c=document.getElementById('qo'+q.correct);if(c)c.classList.add('correct');quizAnswered=true;setTimeout(()=>{quizIdx++;renderQuiz();},1800);}},15000);}
+let hostQuizQuestions = [];
+
+function loadDefaultQuiz(){
+  hostQuizQuestions=JSON.parse(JSON.stringify(quizzes[ctx]||quizzes.edu));
+  renderQuizEditList();
 }
 
-function answerQuiz(idx) {
+function renderQuizEditList(){
+  const el=document.getElementById('quizEditList'); if(!el) return;
+  if(!hostQuizQuestions.length){
+    el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">기본 문제를 불러오거나 직접 추가하세요.</div>';
+    return;
+  }
+  el.innerHTML=hostQuizQuestions.map((q,qi)=>
+    '<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--off);">'+
+    '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">'+
+    '<span style="font-size:12px;font-weight:700;color:var(--muted);">Q'+(qi+1)+'</span>'+
+    '<input type="text" class="form-input" value="'+q.q.replace(/"/g,'&quot;')+'" style="flex:1;" onchange="hostQuizQuestions['+qi+'].q=this.value">'+
+    '<button onclick="removeQuizQuestion('+qi+')" style="border:1px solid var(--border2);background:transparent;border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;">✕</button></div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;">'+
+    q.opts.map((o,oi)=>
+      '<div style="display:flex;gap:6px;align-items:center;">'+
+      '<input type="radio" name="correct_'+qi+'" value="'+oi+'" '+(q.correct===oi?'checked':'')+' onchange="hostQuizQuestions['+qi+'].correct='+oi+'" style="accent-color:var(--theme-a);flex-shrink:0;">'+
+      '<input type="text" class="form-input" value="'+o.replace(/"/g,'&quot;')+'" style="flex:1;font-size:13px;" onchange="hostQuizQuestions['+qi+'].opts['+oi+']=this.value"></div>'
+    ).join('')+
+    '</div><div style="font-size:11px;color:var(--muted);margin-top:8px;">라디오 버튼으로 정답 선택</div></div>'
+  ).join('');
+}
+
+function addQuizQuestion(){
+  hostQuizQuestions.push({q:'새 문제를 입력하세요',opts:['보기 A','보기 B','보기 C','보기 D'],correct:0});
+  renderQuizEditList();
+}
+function removeQuizQuestion(idx){hostQuizQuestions.splice(idx,1);renderQuizEditList();}
+
+async function launchQuizToParticipants(){
+  if(!hostQuizQuestions.length){alert('문제를 먼저 추가해 주세요.');return;}
+  if(FIREBASE_READY&&db&&roomCode){
+    await db.ref(fbPath('quiz')).set({questions:hostQuizQuestions,started:true,currentQ:0,ts:Date.now()});
+    await db.ref(fbPath('activeActivity')).set('quiz');
+  }
+  document.getElementById('quiz-edit-card').style.display='none';
+  document.getElementById('quiz-live-card').style.display='';
+  quizIdx=0;quizScore=0;quizAnswered=false;
+  renderQuiz();
+  addFeed('퀴즈 시작! 참여자에게 전송됨','var(--theme-a)');
+}
+
+function stopQuiz(){
+  document.getElementById('quiz-edit-card').style.display='';
+  document.getElementById('quiz-live-card').style.display='none';
+  if(db&&roomCode) db.ref(fbPath('activeActivity')).set('quiz_edit');
+}
+
+function renderQuiz(){
+  const body=document.getElementById('quizBody'); if(!body) return;
+  const qs=hostQuizQuestions.length?hostQuizQuestions:(quizzes[ctx]||quizzes.edu);
+  if(quizIdx>=qs.length){
+    const pct=Math.round(quizScore/qs.length*100);
+    body.innerHTML='<div class="quiz-result"><div class="quiz-result-score" style="color:var(--theme-a)">'+quizScore+'/'+qs.length+'</div>'+
+      '<div class="quiz-result-label">'+(pct>=80?'🏆 훌륭합니다!':pct>=60?'👍 잘 하셨어요!':'💪 다시 도전!')+'</div>'+
+      '<div style="font-size:14px;color:var(--muted);margin-bottom:24px">정답률 '+pct+'%</div>'+
+      '<div style="display:flex;gap:10px;justify-content:center;">'+
+      '<button class="btn-launch" onclick="restartQuiz()">처음부터 다시</button>'+
+      '<button class="btn-outline" onclick="stopQuiz()">✏️ 문제 편집</button></div></div>';
+    return;
+  }
+  const q=qs[quizIdx]; quizAnswered=false;
+  body.innerHTML='<div class="quiz-header"><div class="quiz-progress">문제 '+(quizIdx+1)+' / '+qs.length+'</div><div class="quiz-score-badge">점수 '+quizScore+'점</div></div>'+
+    '<div class="timer-track"><div class="timer-bar" id="timerBar" style="width:100%"></div></div>'+
+    '<div class="quiz-q">'+q.q+'</div>'+
+    '<div class="quiz-opts">'+q.opts.map((o,i)=>'<div class="q-opt" id="qo'+i+'" onclick="answerQuiz('+i+')"><div class="q-opt-key">'+'ABCD'[i]+'</div>'+o+'</div>').join('')+'</div>';
+  updateCount('cnt-quiz',quizIdx+1);
+  const bar=document.getElementById('timerBar');
+  if(bar){
+    bar.style.transition='width 20s linear';
+    setTimeout(()=>bar.style.width='0%',50);
+    setTimeout(()=>{if(!quizAnswered){document.querySelectorAll('.q-opt').forEach(b=>b.style.pointerEvents='none');const c=document.getElementById('qo'+q.correct);if(c)c.classList.add('correct');quizAnswered=true;setTimeout(()=>{quizIdx++;renderQuiz();},2000);}},20000);
+  }
+}
+
+function answerQuiz(idx){
   if(quizAnswered) return; quizAnswered=true;
-  const q=(quizzes[ctx]||quizzes.edu)[quizIdx];
+  const qs=hostQuizQuestions.length?hostQuizQuestions:(quizzes[ctx]||quizzes.edu);
+  const q=qs[quizIdx];
   document.querySelectorAll('.q-opt').forEach(b=>b.style.pointerEvents='none');
   if(idx===q.correct){document.getElementById('qo'+idx).classList.add('correct');quizScore++;totalResponses++;updateStats();addFeed('퀴즈 정답! 🎉','#22a05a');}
   else{document.getElementById('qo'+idx).classList.add('wrong');const c=document.getElementById('qo'+q.correct);if(c)c.classList.add('correct');addFeed('퀴즈 오답 😅','#e05050');}
-  setTimeout(()=>{quizIdx++;renderQuiz();},1800);
+  setTimeout(()=>{quizIdx++;renderQuiz();},2000);
 }
 
 function restartQuiz(){quizIdx=0;quizScore=0;quizAnswered=false;renderQuiz();}
@@ -2270,7 +2479,7 @@ async function resetSlider(){await fbSet('slider',[]);sliderResponses=[];renderS
 // ============================================================
 //   QR CODE GENERATOR (순수 JS, 외부 라이브러리 없음)
 // ============================================================
-// QR 생성 - 현재 도메인 기반 동적 URL + 세션 코드
+// QR 생성 - 현재 도메인 기반 URL
 function drawQR(url) {
   const canvas = document.getElementById('qrCanvas');
   if (!canvas) return;
@@ -2357,7 +2566,10 @@ function updateParticipantView(act) {
   if (!pTitle || !pContent) return;
 
   if (act === 'poll') {
-    // poll은 Firebase 리스너가 따로 처리
+    const pTitle = document.getElementById('pTitle');
+    const pContent = document.getElementById('pContent');
+    if(pTitle) pTitle.textContent = '실시간 투표';
+    if(pContent) pContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 투표를 시작하면 여기에 표시됩니다.</div>';
   } else if (act === 'wordcloud') {
     pTitle.textContent = '워드클라우드 — 단어 입력';
     pContent.innerHTML = `
@@ -3559,10 +3771,12 @@ function setTopTitle(t){
    Participant: Always-on Q&A (C: 익명 옵션) + session title
 ============================================================ */
 function setParticipantSessionTitle(t){
-  const el = document.getElementById('pSessionTitleHead');
-  if(!el) return;
   const title = (t||'').toString().trim();
-  el.textContent = title ? `· ${title}` : '';
+  const el = document.getElementById('pSessionTitleHead');
+  if(el) el.textContent = title ? '· '+title : '';
+  const banner = document.getElementById('pSessionTitleBanner');
+  const bannerText = document.getElementById('pSessionTitleBannerText');
+  if(banner && bannerText){ bannerText.textContent = title; banner.style.display = title ? 'block' : 'none'; }
 }
 
 async function submitQuickQA(){
@@ -3571,7 +3785,7 @@ async function submitQuickQA(){
   const anon = document.getElementById('qaAnonToggle')?.checked;
   const txt = (input?.value||'').trim();
   if(!txt){ alert('질문을 입력해 주세요.'); return; }
-  const nickToSend = anon ? '익명' : (nickname || '익명');
+  const nickToSend = anon ? '익명' : (participantNickname || '참여자');
   const payload = { q: txt, nick: nickToSend, ts: Date.now(), votes: 0 };
 
   if(!FIREBASE_READY || !db){
