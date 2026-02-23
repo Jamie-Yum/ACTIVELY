@@ -1362,7 +1362,7 @@ body.ui-dark #screen-participant { background: var(--off); }
           </button>
           <button class="act-btn" onclick="switchActivity('rating',this)">
             <div class="act-btn-icon">⭐</div>
-            <span>만족도 평가</span>
+            <span>만족도 체크</span>
             <span class="act-count" id="cnt-rating">0</span>
           </button>
           <button class="act-btn" onclick="switchActivity('slider',this)">
@@ -1480,14 +1480,20 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="card-title">Q&A</div>
           </div>
           <div class="card-body">
-            <div class="qa-submit-area">
-              <div style="display:flex;gap:8px;margin-bottom:8px">
-                <input type="text" class="form-input" id="qaIn" placeholder="질문을 입력하세요..." style="flex:1">
-                <button class="btn-launch" onclick="addQA()">전송</button>
+            
+            <!-- Q&A Dashboard (발표자용) -->
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--muted);font-weight:850;line-height:1.4;">
+                참여자는 언제든 질문을 보낼 수 있어요. (익명/비익명 가능)<br>
+                이 화면은 발표자가 질문을 확인하고, 필요한 질문만 선택해서 화면에 띄우는 용도예요.
               </div>
-              <div style="font-size:11px;color:var(--muted)">💡 실제 환경에서는 참여자들이 직접 자신의 화면에서 질문을 입력합니다.</div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button class="btn-primary" id="qaShowBtn" onclick="showSelectedQA()" disabled>👀 선택 질문 보여주기</button>
+                <button class="btn-outline" onclick="clearQASelection()">선택 해제</button>
+                <span id="qaSelectedCount" style="font-size:12px;color:var(--muted);font-weight:900;">선택 0개</span>
+              </div>
             </div>
-            <div style="display:flex;gap:8px;margin-bottom:16px">
+<div style="display:flex;gap:8px;margin-bottom:16px">
               <button class="btn-sm btn-ghost" onclick="filterQA('all')" id="qa-filter-all" style="border-color:var(--theme-a);color:var(--theme-a)">전체</button>
               <button class="btn-sm btn-ghost" onclick="filterQA('unanswered')" id="qa-filter-unanswered">미답변</button>
               <button class="btn-sm btn-ghost" onclick="filterQA('answered')" id="qa-filter-answered">답변 완료</button>
@@ -1596,38 +1602,47 @@ body.ui-dark #screen-participant { background: var(--off); }
       <div class="activity-panel" id="ap-rating">
         <div class="card">
           <div class="card-header">
-            <div class="card-header-icon">⭐</div>
-            <div class="card-title">만족도 평가</div>
+            <div class="card-header-icon">💛</div>
+            <div class="card-title">만족도 체크</div>
           </div>
           <div class="card-body">
-            <div class="form-group">
-              <label class="form-label">평가 질문</label>
-              <input type="text" class="form-input" id="ratingQ" value="오늘 강의의 전반적인 만족도는?">
-            </div>
-            <div class="rating-container">
-              <div id="ratingQDisplay" style="font-family:var(--font);font-weight:700;font-size:20px;margin-bottom:8px">오늘 강의의 전반적인 만족도는?</div>
-              <div class="rating-stars" id="ratingStars">
-                <span class="star" onclick="rate(1)" onmouseover="hoverStar(1)" onmouseout="unhoverStar()">★</span>
-                <span class="star" onclick="rate(2)" onmouseover="hoverStar(2)" onmouseout="unhoverStar()">★</span>
-                <span class="star" onclick="rate(3)" onmouseover="hoverStar(3)" onmouseout="unhoverStar()">★</span>
-                <span class="star" onclick="rate(4)" onmouseover="hoverStar(4)" onmouseout="unhoverStar()">★</span>
-                <span class="star" onclick="rate(5)" onmouseover="hoverStar(5)" onmouseout="unhoverStar()">★</span>
-              </div>
-              <div class="rating-label" id="ratingLabel">별점을 클릭해 평가에 참여하세요</div>
-              <div class="rating-result" id="ratingResult" style="display:none">
-                <div>
-                  <div class="rating-avg" id="ratingAvg">—</div>
-                  <div style="font-size:12px;color:var(--muted)">평균 점수</div>
-                </div>
-                <div style="text-align:left">
-                  <div id="ratingDistribution"></div>
-                </div>
+
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">문항 목록 (여러 개 추가 가능)</label>
+              <div id="ratingEditList"></div>
+              <button class="btn-add-opt" onclick="addRatingItem()" style="margin-top:8px;">+ 문항 추가</button>
+              <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">
+                💡 문항을 "전송"하면 참여자 화면에 바로 떠요. (퀴즈처럼 여러 번 진행 가능)
               </div>
             </div>
-            <div class="action-row">
-              <button class="btn-outline" onclick="resetRating()">🔄 초기화</button>
-              <button class="btn-launch" onclick="addRandomRatings()">🎲 테스트 평가 추가</button>
+
+            <div class="card" style="border-radius:16px;border:1px dashed var(--border2);background:var(--off);">
+              <div class="card-body" style="padding:18px;">
+                <div style="font-size:11px;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">미리보기</div>
+                <div class="rating-container" style="padding:6px 0 6px;">
+                  <div id="ratingQDisplay" style="font-family:var(--font);font-weight:900;font-size:20px;margin-bottom:10px">문항을 선택해 전송해 주세요</div>
+                  <div class="rating-stars" id="ratingStars"></div>
+                  <div class="rating-label" id="ratingLabel">아이콘을 눌러 응답해요</div>
+
+                  <div class="rating-result" id="ratingResult" style="display:none">
+                    <div>
+                      <div class="rating-avg" id="ratingAvg">—</div>
+                      <div style="font-size:12px;color:var(--muted)">평균</div>
+                    </div>
+                    <div style="text-align:left">
+                      <div id="ratingDistribution"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="action-row" style="margin-top:10px;">
+                  <button class="btn-outline" onclick="resetActiveRating()">🔄 현재 문항 초기화</button>
+                  <button class="btn-outline" onclick="resetAllRatings()">🧹 전체 문항 초기화</button>
+                  <button class="btn-launch" onclick="addRandomRatings()">🎲 테스트 응답</button>
+                </div>
+              </div>
             </div>
+
           </div>
         </div>
       </div>
@@ -1964,12 +1979,13 @@ async function initHostSession(c, initialAct) {
     await db.ref(fbPath('')).set({
       ctx:c, title: sessionTitle || '', hostKey: hostKey || '', createdAt:Date.now(), active:true,
       participants:0, responses:0, activeActivity:(initialAct||'poll'),
-      poll:{live:false,q:'',opts:[],votes:{}}, wordcloud:{}, rating:[], slider:[]
+      poll:{live:false,q:'',opts:[],votes:{}}, wordcloud:{}, ratingItems:{r1:{title:'오늘 세션은 어땠나요?',icon:'star'}}, ratingVotes:{r1:[]}, ratingActiveId:'r1', slider:[]
     });
 
     // Listeners
     fbOn('participants','value', s=>{ totalParticipants=s.val()||0; updateStats(); });
     attachParticipantMetaListeners();
+    attachRatingListeners();
     fbOn('nicknames','value', s=>{ participantNames = s.val()||{}; renderParticipantNames(); });
     fbOn('responses','value', s=>{ totalResponses=s.val()||0; updateStats(); });
 
@@ -1993,9 +2009,7 @@ async function initHostSession(c, initialAct) {
       if(idx>=0){ qaItems[idx]={...qaItems[idx],...s.val(),id:s.key}; renderQA(); }
     });
 
-    fbOn('rating','value', s=>{
-      ratings=s.val()||[]; if(document.getElementById('ap-rating')?.classList.contains('active')){ updateRatingResult(); updateCount('cnt-rating',ratings.length); }
-    });
+    attachRatingListeners();
 
     fbOn('slider','value', s=>{
       sliderResponses=s.val()||[]; if(document.getElementById('ap-slider')?.classList.contains('active')){ renderSliderResults(); updateCount('cnt-slider',sliderResponses.length); }
@@ -2041,6 +2055,8 @@ async function joinSessionFirebase(code) {
           if(!pTitle||!pContent) return;
           if(!d||!d.live){ pTitle.textContent='실시간 투표'; pContent.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 투표를 시작하면 여기에 표시됩니다.</div>'; }
         });
+      } else if(act==='rating'){
+        renderParticipantRating(code);
       } else if(act==='quiz'||act==='quiz_edit'){
         if(!pTitle||!pContent) return;
         pTitle.textContent='퀴즈';
@@ -2153,6 +2169,54 @@ function renderMyResponses() {
 }
 
 // 퀴즈 참여자 렌더 (타이머 버그 수정 - requestAnimationFrame 사용)
+
+function renderParticipantRating(code){
+  const pTitle=document.getElementById('pTitle');
+  const pContent=document.getElementById('pContent');
+  if(!pTitle||!pContent) return;
+
+  // active id + item meta 가져오기
+  db.ref(`sessions/${code}/ratingActiveId`).once('value').then(snap=>{
+    const id=snap.val();
+    if(!id){ pTitle.textContent='만족도 체크'; pContent.innerHTML='<div style="text-align:center;padding:28px;color:var(--muted);font-weight:800;">아직 문항이 전송되지 않았어요.</div>'; return; }
+    activeRatingId=id; // rate()가 같은 id로 저장하도록
+
+    Promise.all([
+      db.ref(`sessions/${code}/ratingItems/${id}`).once('value'),
+      db.ref(`sessions/${code}/ratingVotes/${id}`).once('value')
+    ]).then(([is,vs])=>{
+      const item=is.val()||{title:'만족도 체크',icon:'star'};
+      const votes=vs.val()||[];
+      ratingItemsById = ratingItemsById || {};
+      ratingVotesById = ratingVotesById || {};
+      ratingItemsById[id]=item;
+      ratingVotesById[id]=Array.isArray(votes)?votes:[];
+
+      pTitle.textContent=item.title||'만족도 체크';
+      const g=iconGlyph(item.icon||'star');
+
+      pContent.innerHTML = `
+        <div style="text-align:center;">
+          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:10px;">아래 아이콘을 눌러 응답해 주세요</div>
+          <div class="rating-stars" id="pRatingStars" style="font-size:44px;gap:12px;">
+            ${Array.from({length:5},(_,i)=>`<span class="star" onclick="rate(${i+1})">${g}</span>`).join('')}
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:var(--muted);" id="pRatingMini">실시간 평균/분포는 발표자 화면에서 확인돼요</div>
+        </div>
+      `;
+
+      // votes 변화도 따라가서 badge 업데이트 (가벼운 on)
+      const ref = db.ref(`sessions/${code}/ratingVotes/${id}`);
+      if(window._pRatingVotesRef) window._pRatingVotesRef.off();
+      window._pRatingVotesRef = ref;
+      ref.on('value', sn=>{
+        const v = sn.val() || [];
+        ratingVotesById[id]=Array.isArray(v)?v:[];
+      });
+    });
+  });
+}
+
 function renderParticipantQuiz(code, questions, qIdx) {
   const pTitle=document.getElementById('pTitle');
   const pContent=document.getElementById('pContent');
@@ -2310,6 +2374,10 @@ async function startAsHost(c, initialAct, title) {
   if(FIREBASE_READY && db && roomCode){
     db.ref(`sessions/${roomCode}/title`).on('value', s=>setTopTitle(s.val()||sessionTitle||''));
   }
+  // 로컬 히스토리에 세션 저장
+  saveSessionToLocal(roomCode, c, sessionTitle);
+  renderLocalHistory();
+
   if(!FIREBASE_READY) {
     setInterval(()=>{ if(Math.random()<0.15){ totalParticipants+=Math.floor(Math.random()*3)+1; updateStats(); addFeed('참여자가 입장했습니다','#22a05a'); } },4000);
   }
@@ -2485,8 +2553,9 @@ function renderQA() {
   if(qaFilter==='unanswered') filtered=filtered.filter(i=>!i.answered);
   filtered.sort((a,b)=>b.votes-a.votes);
   if(!filtered.length){list.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">아직 질문이 없습니다</div>`;return;}
-  filtered.forEach(item=>{ const div=document.createElement('div'); div.className='qa-card'+(item.answered?' answered':''); div.innerHTML=`<div class="qa-q">${escapeHtml(item.q)}</div><div class="qa-footer"><div class="qa-author">익명</div><div class="qa-actions"><button class="up-btn ${item.voted?'voted':''}" onclick="upvote('${item.id}')">▲ ${item.votes}</button>${item.answered?'<span class="answered-tag">✓ 답변 완료</span>':`<button class="mark-answered-btn" onclick="markAnswered('${item.id}')">답변 완료</button>`}</div></div>`; list.appendChild(div); });
+  filtered.forEach(item=>{ const div=document.createElement('div'); div.className='qa-card'+(item.answered?' answered':''); div.style.cursor='pointer'; div.onclick=()=>toggleQASelect(item.id); div.innerHTML=`<div style="display:flex;align-items:flex-start;gap:10px"><label style="margin-top:2px;display:flex;align-items:center;gap:6px;"><input type="checkbox" class="qa-select" ${qaSelectedIds && qaSelectedIds.has(item.id) ? "checked" : ""} onclick="event.stopPropagation();toggleQASelect(\'${item.id}\')" /></label><div style="flex:1;min-width:0"><div class="qa-q">${escapeHtml(item.q)}</div><div class="qa-footer"><div class="qa-author">${escapeHtml(item.author || item.nick || "익명")}</div><div class="qa-actions"><button class="up-btn ${item.voted?'voted':''}" onclick="upvote(\'${item.id}\')">▲ ${item.votes}</button>${item.answered?'<span class="answered-tag">✓ 답변 완료</span>':`<button class="mark-answered-btn" onclick="markAnswered(\'${item.id}\')">답변 완료</button>`}</div></div></div></div>`; list.appendChild(div); });
   updateCount('cnt-qa',qaItems.length); totalQuestions=qaItems.length; updateStats();
+  updateQASelectionUI();
 }
 
 async function upvote(id) {
@@ -2514,6 +2583,71 @@ let hostQuizQuestions = [];
 let quizTimerSec = 20;
 let quizAnswerCounts = {};
 let currentMonitorQ = 0;
+// ============================================================
+//   Q&A — 선택/보여주기(발표자) + 오버레이(참여자)
+// ============================================================
+let qaSelectedIds = new Set();
+
+function updateQASelectionUI(){
+  const c = qaSelectedIds.size;
+  const el = document.getElementById('qaSelectedCount');
+  if(el) el.textContent = `선택 ${c}개`;
+  const btn = document.getElementById('qaShowBtn');
+  if(btn) btn.disabled = c === 0;
+}
+
+function toggleQASelect(id){
+  if(!id) return;
+  if(qaSelectedIds.has(id)) qaSelectedIds.delete(id);
+  else qaSelectedIds.add(id);
+  updateQASelectionUI();
+  renderQA();
+}
+
+function clearQASelection(){
+  qaSelectedIds.clear();
+  updateQASelectionUI();
+  renderQA();
+}
+
+async function showSelectedQA(){
+  if(!FIREBASE_READY || !db || !roomCode){ alert('세션 연결이 필요해요.'); return; }
+  const items = qaItems.filter(x=>qaSelectedIds.has(x.id)).slice(0, 5).map(x=>({
+    q: x.q || '',
+    author: x.author || x.nick || '익명',
+    id: x.id
+  }));
+  if(!items.length){ alert('선택된 질문이 없어요.'); return; }
+  await db.ref(`sessions/${roomCode}/qaShow`).set({ items, ts: Date.now() });
+  addFeed(`👀 질문 ${items.length}개를 화면에 표시`, '#6d28d9');
+  clearQASelection();
+}
+
+function hideQAShow(){
+  const ov = document.getElementById('qaShowOverlay');
+  if(ov) ov.style.display='none';
+}
+
+function showQAShowOverlay(payload){
+  const ov = document.getElementById('qaShowOverlay');
+  const box = document.getElementById('qaShowContent');
+  if(!ov || !box) return;
+  const items = (payload && Array.isArray(payload.items)) ? payload.items : [];
+  box.innerHTML = '';
+  if(!items.length) return;
+  items.forEach((it, idx)=>{
+    const card = document.createElement('div');
+    card.style.border = '1px solid var(--border)';
+    card.style.borderRadius = '16px';
+    card.style.padding = '12px 12px';
+    card.style.background = 'var(--surface)';
+    card.innerHTML = `<div style="font-weight:950;margin-bottom:6px">Q${idx+1}. ${escapeHtml(it.q||'')}</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:900">${escapeHtml(it.author||'익명')}</div>`;
+    box.appendChild(card);
+  });
+  ov.style.display='flex';
+}
+
 
 function setQuizTimer(sec, btn) {
   quizTimerSec = sec;
@@ -2694,33 +2828,395 @@ function answerQuiz() {}
 function restartQuiz() { stopQuiz(); }
 
 // ============================================================
-//   RATING
+//   RATING (multi items + icon sets)
 // ============================================================
-let currentRating=0;
-const ratingLabels=['','형편없어요 😞','아쉬워요 😕','보통이에요 😐','좋아요 😊','매우 좋아요 🌟'];
-function hoverStar(n){updateStarDisplay(n);document.getElementById('ratingLabel').textContent=ratingLabels[n];}
-function unhoverStar(){updateStarDisplay(currentRating);document.getElementById('ratingLabel').textContent=currentRating?ratingLabels[currentRating]:'별점을 클릭해 평가에 참여하세요';}
-function updateStarDisplay(n){document.querySelectorAll('.star').forEach((s,i)=>{s.classList.toggle('active',i<n);s.style.color=i<n?'var(--theme-a)':'';}); }
+let ratingItemsById = {};        // {id:{title, icon:'star'|'heart'|'smile'}}
+let ratingVotesById = {};        // {id:[1..5]}
+let activeRatingId = null;
+let currentRating = 0;
+
+const ratingIconSets = {
+  star:  { label:'별(⭐)',    glyph:'★', activeGlyph:'★' },
+  heart: { label:'하트(❤️)', glyph:'♥', activeGlyph:'♥' },
+  smile: { label:'스마일(😊)', glyph:'😊', activeGlyph:'😊' },
+};
+
+const ratingLabels = ['', '형편없어요 😞', '아쉬워요 😕', '보통이에요 😐', '좋아요 😊', '매우 좋아요 🌟'];
+
+function totalRatingVotes() {
+  return Object.values(ratingVotesById || {}).reduce((sum, arr) => sum + ((arr || []).length), 0);
+}
+
+function getActiveVotes() {
+  return (activeRatingId && ratingVotesById && Array.isArray(ratingVotesById[activeRatingId]))
+    ? ratingVotesById[activeRatingId]
+    : [];
+}
+
+function ensureRatingSeedLocal() {
+  // demo / 초기 진입 대비
+  if (!ratingItemsById || typeof ratingItemsById !== 'object') ratingItemsById = {};
+  const keys = Object.keys(ratingItemsById);
+  if (keys.length) return;
+
+  const id = 'r1';
+  ratingItemsById[id] = { title: '오늘 세션은 어땠나요?', icon: 'star' };
+  activeRatingId = id;
+  ratingVotesById[id] = ratingVotesById[id] || [];
+}
+
+async function ensureRatingSeedFirebase() {
+  if (!db || !roomCode) { ensureRatingSeedLocal(); return; }
+  const snap = await db.ref(fbPath('ratingItems')).once('value');
+  const items = snap.val();
+  if (items && Object.keys(items).length) return;
+
+  const id = 'r1';
+  const seed = { [id]: { title: '오늘 세션은 어땠나요?', icon: 'star' } };
+  await fbSet('ratingItems', seed);
+  await fbSet('ratingVotes', {});
+  await fbSet('ratingActiveId', id);
+}
+
+function iconGlyph(iconKey) {
+  return (ratingIconSets[iconKey] || ratingIconSets.star).glyph;
+}
+
+function renderRatingStars(iconKey) {
+  const wrap = document.getElementById('ratingStars');
+  if (!wrap) return;
+  const g = iconGlyph(iconKey);
+  wrap.innerHTML = Array.from({ length: 5 }, (_, i) =>
+    `<span class="star" onclick="rate(${i+1})" onmouseover="hoverStar(${i+1})" onmouseout="unhoverStar()">${g}</span>`
+  ).join('');
+
+  // 기존 상태 반영
+  updateStarDisplay(currentRating);
+}
+
+function hoverStar(n) {
+  updateStarDisplay(n);
+  const lbl = document.getElementById('ratingLabel');
+  if (lbl) lbl.textContent = ratingLabels[n];
+}
+function unhoverStar() {
+  updateStarDisplay(currentRating);
+  const lbl = document.getElementById('ratingLabel');
+  if (lbl) lbl.textContent = currentRating ? ratingLabels[currentRating] : '아이콘을 눌러 응답해요';
+}
+
+function updateStarDisplay(n) {
+  document.querySelectorAll('#ratingStars .star').forEach((s, i) => {
+    s.classList.toggle('active', i < n);
+    s.style.color = i < n ? 'var(--theme-a)' : '';
+    s.style.opacity = i < n ? '1' : '0.32';
+  });
+}
+
+function renderRatingEditList() {
+  const box = document.getElementById('ratingEditList');
+  if (!box) return;
+
+  const ids = Object.keys(ratingItemsById || {});
+  if (!ids.length) {
+    box.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:10px 0;">아직 문항이 없어요. 아래에서 추가해 주세요.</div>`;
+    return;
+  }
+
+  box.innerHTML = ids.map((id, idx) => {
+    const it = ratingItemsById[id] || {};
+    const title = escapeHtml(it.title || `문항 ${idx+1}`);
+    const icon = it.icon || 'star';
+    const isActive = id === activeRatingId;
+
+    const opts = Object.keys(ratingIconSets).map(k =>
+      `<option value="${k}" ${k===icon?'selected':''}>${ratingIconSets[k].label}</option>`
+    ).join('');
+
+    return `
+      <div class="card" style="border-radius:14px;border:1px solid var(--border);background:var(--white);margin-bottom:10px;">
+        <div class="card-body" style="padding:14px;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input class="form-input" id="rating-title-${id}" value="${title}" placeholder="예: 오늘 강의는 어땠나요?" style="flex:1;min-width:220px;">
+            <select class="form-input" id="rating-icon-${id}" style="width:160px;min-width:160px;">
+              ${opts}
+            </select>
+
+            <button class="btn-sm ${isActive ? 'btn-primary-theme' : 'btn-ghost'}" onclick="launchRating('${id}')">
+              ${isActive ? '✅ 전송됨' : '📢 전송'}
+            </button>
+            <button class="btn-sm btn-ghost" onclick="saveRatingItem('${id}')">💾 저장</button>
+            <button class="btn-sm btn-ghost" onclick="duplicateRatingItem('${id}')">⎘ 복제</button>
+            <button class="btn-sm btn-ghost" onclick="removeRatingItem('${id}')" style="border-color:#ffb3b3;color:#b10000;background:#fff;">삭제</button>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="badge">${iconGlyph(icon)} 아이콘</span>
+            <span class="badge">${(ratingVotesById[id]||[]).length}명 응답</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 미리보기
+  updateRatingPreview();
+}
+
+function updateRatingPreview() {
+  const qEl = document.getElementById('ratingQDisplay');
+  if (!qEl) return;
+
+  const it = activeRatingId ? (ratingItemsById[activeRatingId] || null) : null;
+  if (!it) {
+    qEl.textContent = '문항을 선택해 전송해 주세요';
+    renderRatingStars('star');
+    document.getElementById('ratingResult').style.display = 'none';
+    return;
+  }
+
+  qEl.textContent = it.title || '만족도 체크';
+  renderRatingStars(it.icon || 'star');
+
+  // 결과 업데이트
+  updateRatingResult();
+}
+
+function newRatingId() {
+  return 'r' + Math.random().toString(36).slice(2, 9);
+}
+
+async function addRatingItem() {
+  const id = newRatingId();
+  const item = { title: `새 문항 ${Object.keys(ratingItemsById||{}).length + 1}`, icon: 'star' };
+
+  if (db && roomCode) {
+    await ensureRatingSeedFirebase();
+    await db.ref(fbPath(`ratingItems/${id}`)).set(item);
+    await db.ref(fbPath(`ratingVotes/${id}`)).set([]);
+  } else {
+    ensureRatingSeedLocal();
+    ratingItemsById[id] = item;
+    ratingVotesById[id] = [];
+    if (!activeRatingId) activeRatingId = id;
+    renderRatingEditList();
+  }
+}
+
+async function saveRatingItem(id) {
+  const title = document.getElementById(`rating-title-${id}`)?.value?.trim() || '만족도 체크';
+  const icon = document.getElementById(`rating-icon-${id}`)?.value || 'star';
+  const patch = { title, icon };
+
+  if (db && roomCode) {
+    await db.ref(fbPath(`ratingItems/${id}`)).update(patch);
+  } else {
+    ratingItemsById[id] = { ...(ratingItemsById[id]||{}), ...patch };
+    renderRatingEditList();
+  }
+
+  addFeed(`만족도 문항 저장됨`, 'var(--muted)');
+  if (id === activeRatingId) updateRatingPreview();
+}
+
+async function duplicateRatingItem(id) {
+  const src = ratingItemsById[id] || { title: '복제 문항', icon: 'star' };
+  const nid = newRatingId();
+  const item = { title: (src.title || '복제 문항') + ' (복제)', icon: src.icon || 'star' };
+
+  if (db && roomCode) {
+    await db.ref(fbPath(`ratingItems/${nid}`)).set(item);
+    await db.ref(fbPath(`ratingVotes/${nid}`)).set([]);
+  } else {
+    ratingItemsById[nid] = item;
+    ratingVotesById[nid] = [];
+    renderRatingEditList();
+  }
+}
+
+async function removeRatingItem(id) {
+  const ids = Object.keys(ratingItemsById || {});
+  if (ids.length <= 1) { alert('문항은 최소 1개는 있어야 해요!'); return; }
+
+  if (db && roomCode) {
+    await db.ref(fbPath(`ratingItems/${id}`)).remove();
+    await db.ref(fbPath(`ratingVotes/${id}`)).remove();
+    if (activeRatingId === id) {
+      // 다른 문항으로 이동
+      const remainSnap = await db.ref(fbPath('ratingItems')).once('value');
+      const remain = remainSnap.val() || {};
+      const nextId = Object.keys(remain)[0] || null;
+      if (nextId) await launchRating(nextId);
+    }
+  } else {
+    delete ratingItemsById[id];
+    delete ratingVotesById[id];
+    if (activeRatingId === id) activeRatingId = Object.keys(ratingItemsById)[0] || null;
+    renderRatingEditList();
+  }
+}
+
+async function launchRating(id) {
+  await saveRatingItem(id);
+  activeRatingId = id;
+  currentRating = 0;
+  updateStarDisplay(0);
+  document.getElementById('ratingLabel').textContent = '아이콘을 눌러 응답해요';
+
+  if (isHost && db && roomCode) {
+    await db.ref(fbPath('ratingActiveId')).set(id);
+    await db.ref(fbPath('activeActivity')).set('rating');
+  }
+
+  updateRatingPreview();
+  renderRatingEditList();
+  addFeed(`만족도 문항 전송됨`, 'var(--theme-a)');
+}
+
+async function resetActiveRating() {
+  if (!activeRatingId) return;
+  if (db && roomCode) {
+    await fbSet(`ratingVotes/${activeRatingId}`, []);
+  } else {
+    ratingVotesById[activeRatingId] = [];
+    updateRatingResult();
+    renderRatingEditList();
+  }
+  addFeed('현재 문항 응답 초기화', 'var(--muted)');
+}
+
+async function resetAllRatings() {
+  const ids = Object.keys(ratingItemsById || {});
+  if (db && roomCode) {
+    // 전체 votes reset
+    const fresh = {};
+    ids.forEach(id => fresh[id] = []);
+    await fbSet('ratingVotes', fresh);
+  } else {
+    ids.forEach(id => ratingVotesById[id] = []);
+    updateRatingResult();
+    renderRatingEditList();
+  }
+  addFeed('전체 문항 응답 초기화', 'var(--muted)');
+}
 
 async function rate(n) {
-  currentRating=n; updateStarDisplay(n); document.getElementById('ratingLabel').textContent=ratingLabels[n];
-  const newR=[...ratings,n]; const wrote=await fbSet('rating',newR);
-  if(!wrote){ratings.push(n);totalResponses++;updateStats();updateRatingResult();updateCount('cnt-rating',ratings.length);}
-  addFeed(`만족도 ${n}점 평가 제출됨`,'var(--theme-a)');
+  if (!activeRatingId) { alert('먼저 문항이 전송되어야 해요!'); return; }
+
+  currentRating = n;
+  updateStarDisplay(n);
+  const lbl = document.getElementById('ratingLabel');
+  if (lbl) lbl.textContent = ratingLabels[n];
+
+  // Firebase: transaction append
+  const path = `ratingVotes/${activeRatingId}`;
+  const wrote = await fbTransaction(path, arr => {
+    const a = Array.isArray(arr) ? arr : [];
+    return a.concat([n]);
+  });
+
+  if (!wrote) {
+    // demo/local fallback
+    ratingVotesById[activeRatingId] = [...getActiveVotes(), n];
+    totalResponses++;
+    updateStats();
+    updateRatingResult();
+    updateCount('cnt-rating', totalRatingVotes());
+    renderRatingEditList();
+  }
+
+  addFeed(`만족도 응답 제출됨 (${n}점)`, 'var(--theme-a)');
 }
 
 function updateRatingResult() {
-  if(!ratings.length) return;
-  const avg=(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1);
-  document.getElementById('ratingAvg').textContent=avg;
-  document.getElementById('ratingResult').style.display='flex';
-  const dist=document.getElementById('ratingDistribution'); dist.innerHTML='';
-  for(let s=5;s>=1;s--){const cnt=ratings.filter(r=>r===s).length;const pct=Math.round(cnt/ratings.length*100);dist.innerHTML+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;width:12px;color:var(--theme-a);font-weight:700">${s}</span><div style="width:80px;height:6px;background:var(--off2);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--theme-g);border-radius:3px;transition:width 0.5s"></div></div><span style="font-size:10px;color:var(--muted)">${cnt}</span></div>`;}
-  document.getElementById('ratingAvg').style.color='var(--theme-a)';
+  const votes = getActiveVotes();
+  if (!votes.length) { 
+    const res = document.getElementById('ratingResult');
+    if (res) res.style.display = 'none';
+    return;
+  }
+
+  const avg = (votes.reduce((a, b) => a + b, 0) / votes.length).toFixed(1);
+  document.getElementById('ratingAvg').textContent = avg;
+  document.getElementById('ratingResult').style.display = 'flex';
+
+  const dist = document.getElementById('ratingDistribution');
+  dist.innerHTML = '';
+  for (let s = 5; s >= 1; s--) {
+    const cnt = votes.filter(r => r === s).length;
+    const pct = Math.round(cnt / votes.length * 100);
+    dist.innerHTML += `
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-size:11px;width:12px;color:var(--theme-a);font-weight:700">${s}</span>
+        <div style="width:80px;height:6px;background:var(--off2);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:var(--theme-g);border-radius:3px;transition:width 0.5s"></div>
+        </div>
+        <span style="font-size:10px;color:var(--muted)">${cnt}</span>
+      </div>
+    `;
+  }
+  document.getElementById('ratingAvg').style.color = 'var(--theme-a)';
 }
 
-async function resetRating(){await fbSet('rating',[]);ratings=[];currentRating=0;updateStarDisplay(0);document.getElementById('ratingResult').style.display='none';document.getElementById('ratingLabel').textContent='별점을 클릭해 평가에 참여하세요';updateCount('cnt-rating',0);}
-async function addRandomRatings(){const n=Math.floor(Math.random()*10)+5;const nr=[...ratings,...Array.from({length:n},()=>Math.floor(Math.random()*2)+4)];await fbSet('rating',nr);if(!FIREBASE_READY){ratings=nr;totalResponses+=n;updateStats();updateRatingResult();updateCount('cnt-rating',ratings.length);}addFeed(`${n}개 테스트 평가 추가됨`,'var(--muted)');}
+async function addRandomRatings() {
+  if (!activeRatingId) return;
+  const n = Math.floor(Math.random() * 10) + 5;
+  const add = Array.from({ length: n }, () => Math.floor(Math.random() * 2) + 4);
+
+  const path = `ratingVotes/${activeRatingId}`;
+  const wrote = await fbTransaction(path, arr => {
+    const a = Array.isArray(arr) ? arr : [];
+    return a.concat(add);
+  });
+
+  if (!wrote) {
+    ratingVotesById[activeRatingId] = [...getActiveVotes(), ...add];
+    totalResponses += n;
+    updateStats();
+    updateRatingResult();
+    updateCount('cnt-rating', totalRatingVotes());
+    renderRatingEditList();
+  }
+  addFeed(`${n}개 테스트 응답 추가됨`, 'var(--muted)');
+}
+
+// Firebase listeners (host + participant 공용)
+let ratingListenersAttached=false;
+function attachRatingListeners() {
+  if(ratingListenersAttached) return;
+  ratingListenersAttached=true;
+  if (!db || !roomCode) { 
+    ensureRatingSeedLocal();
+    renderRatingEditList();
+    updateRatingPreview();
+    updateCount('cnt-rating', totalRatingVotes());
+    return;
+  }
+
+  ensureRatingSeedFirebase();
+
+  fbOn('ratingItems', 'value', s => {
+    ratingItemsById = s.val() || {};
+    // active id가 아직 없으면 첫 문항 자동 선택
+    if (!activeRatingId) activeRatingId = Object.keys(ratingItemsById)[0] || null;
+    renderRatingEditList();
+    updateRatingPreview();
+  });
+
+  fbOn('ratingVotes', 'value', s => {
+    ratingVotesById = s.val() || {};
+    updateCount('cnt-rating', totalRatingVotes());
+    updateRatingResult();
+    renderRatingEditList();
+  });
+
+  fbOn('ratingActiveId', 'value', s => {
+    activeRatingId = s.val() || null;
+    currentRating = 0;
+    updateStarDisplay(0);
+    updateRatingPreview();
+    renderRatingEditList();
+  });
+}
 
 // ============================================================
 //   SLIDER
@@ -2978,7 +3474,7 @@ function updateParticipantView(act) {
       <textarea class="form-input form-textarea" id="pQaInput" placeholder="질문을 입력하세요..." style="min-height:120px;"></textarea>
       ${submitBtn('질문 제출하기', 'submitParticipantQA()')}`;
   } else if (act === 'rating') {
-    pTitle.textContent = '만족도 평가';
+    pTitle.textContent = '만족도 체크';
     pContent.innerHTML = `
       <div style="margin-bottom:16px;font-size:13px;color:var(--muted);text-align:center;">별점을 선택해 주세요</div>
       <div class="rating-stars" style="justify-content:center;font-size:44px;gap:8px;" id="pRatingStars">
@@ -3029,1119 +3525,43 @@ async function submitParticipantWord() {
   showSubmitSuccess(`"${w.replace(/_/g,' ')}" 등록 완료!`);
 }
 
-async function submitParticipantQA() {
-  const input = document.getElementById('pQaInput');
-  const q = input?.value.trim();
-  if (!q) return;
-  const author = participantNickname || '익명';
-  if (db && roomCode) {
-    await db.ref(`sessions/${roomCode}/qa`).push({ q, author, votes: 0, answered: false, timestamp: Date.now() });
-  }
-  showSubmitSuccess('질문이 등록됐어요!');
-}
-
-async function submitParticipantRating() {
-  if (!pSelectedRating) return;
-  if (db && roomCode) {
-    const snap = await db.ref(`sessions/${roomCode}/rating`).once('value');
-    await db.ref(`sessions/${roomCode}/rating`).set([...(snap.val() || []), pSelectedRating]);
-  }
-  showSubmitSuccess(`${ratingEmoji[pSelectedRating]} ${pSelectedRating}점으로 평가 완료!`);
-}
-
-async function submitParticipantSlider() {
-  const v = parseInt(document.getElementById('pSlider')?.value || 50);
-  if (db && roomCode) {
-    const snap = await db.ref(`sessions/${roomCode}/slider`).once('value');
-    await db.ref(`sessions/${roomCode}/slider`).set([...(snap.val() || []), v]);
-  }
-  showSubmitSuccess(`${v}점으로 응답 완료!`);
-}
-
-async function participantVote(code, optIdx, optName) {
-  if (!db) return;
-  await db.ref(`sessions/${code}/poll/votes/${optIdx}`).transaction(n => (n || 0) + 1);
-  await db.ref(`sessions/${code}/responses`).transaction(n => (n || 0) + 1);
-  // 투표 버튼 비활성화 + 완료 메시지
-  document.querySelectorAll('#pContent .v-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
-  showSubmitSuccess(`"${optName}" 에 투표 완료!`);
-}
-
-function previewParticipant() {
-  document.getElementById('pContextLabel').textContent = ctxConfig[ctx].label;
-  // 닉네임 오버레이 다시 표시 (미리보기이므로 스킵)
-  const overlay = document.getElementById('nicknameOverlay');
-  if (overlay) overlay.style.display = 'none';
-  const badge = document.getElementById('pNicknameBadge');
-  if (badge) { badge.textContent = '👤 미리보기'; badge.style.display = 'block'; }
-
-  const active = document.querySelector('.activity-panel.active');
-  const actId = active ? active.id.replace('ap-', '') : 'poll';
-  updateParticipantView(actId);
-
-  if (actId === 'poll') {
-    const q = pollLive ? pollData.q : (document.getElementById('pollQ')?.value || '투표 질문');
-    const opts = pollLive ? pollData.opts : Array.from(document.querySelectorAll('#pollOpts input')).map(i => i.value);
-    document.getElementById('pTitle').textContent = q;
-    document.getElementById('pContent').innerHTML =
-      opts.map((o, i) => `<button class="v-btn" style="width:100%;margin-bottom:10px;padding:14px;font-size:14px;" onclick="participantVote('${roomCode}',${i},'${o}')">${o}</button>`).join('') +
-      `<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px;">하나를 선택하면 자동으로 제출됩니다</div>`;
-  }
-  showScreen('participant');
-}
-
-function closeParticipant() { showScreen('host'); }
-
-// ============================================================
-//   MISC — copyJoinLink (QR도 함께 업데이트)
-// ============================================================
-function copyJoinLink() {
-  const joinUrl = location.origin+location.pathname+(roomCode?'?join='+roomCode:'');
-  navigator.clipboard?.writeText(joinUrl).catch(() => {});
-
-  // 링크 표시 박스 업데이트
-  const display = document.getElementById('joinLinkDisplay');
-  if (display) display.textContent = joinUrl;
-
-  // QR 재생성
-  drawQR(joinUrl);
-
-  // 버튼 피드백
-  const btn = document.getElementById('copyLinkBtn');
-  if (btn) { btn.textContent = '✓ 복사됨!'; setTimeout(() => btn.textContent = '🔗 링크 복사', 2000); }
-  const navBtn = document.querySelector('.btn-primary-theme[onclick="copyJoinLink()"]');
-  if (navBtn) { navBtn.textContent = '✓ 복사됨!'; setTimeout(() => navBtn.textContent = '🔗 링크 복사', 2000); }
-
-  addFeed('참여 링크가 복사되었습니다', 'var(--muted)');
-}
-
-// ============================================================
-//   UI MODE SWITCHER
-// ============================================================
-function setUiMode(mode){currentUiMode=mode;document.body.classList.remove('ui-dark','ui-vivid');if(mode==='dark')document.body.classList.add('ui-dark');if(mode==='vivid')document.body.classList.add('ui-vivid');['light','dark','vivid'].forEach(m=>{const s1=document.getElementById('sw-'+m);const s2=document.getElementById('land-sw-'+m);if(s1)s1.classList.toggle('active',m===mode);if(s2)s2.classList.toggle('active',m===mode);});if(ctx)setTheme(ctx);}
-
-// ============================================================
-//   INIT — Auto-join via URL param
-// ============================================================
-(function init(){
-  const params = new URLSearchParams(location.search);
-  const joinCode = params.get('join');
-  if (joinCode && FIREBASE_READY) {
-    // URL로 직접 접속한 참여자 → 닉네임 화면 먼저 보여주고 입장
-    showScreen('participant');
-    const overlay = document.getElementById('nicknameOverlay');
-    if (overlay) overlay.style.display = 'flex';
-    // confirmNickname 후 실제 세션 연결
-    window._pendingJoinCode = joinCode;
-    const origConfirm = window.confirmNickname;
-    window.confirmNickname = async function() {
-      origConfirm();
-      // joinCodeInput이 없을 수 있으므로 코드를 직접 joinSessionFirebase에 전달
-      const btn = document.querySelector('.btn-join');
-      const ok = await joinSessionFirebase(joinCode);
-      if (ok) {
-        setTheme(ctx);
-        const ctxLbl = document.getElementById('pContextLabel');
-        if (ctxLbl) ctxLbl.textContent = ctxConfig[ctx]?.label || '세션';
-        attachKickListener();
-        showQAFab(true);
-      } else {
-        alert('세션 코드를 찾을 수 없어요. 링크를 다시 확인해 주세요.');;
-        showScreen('landing');
-      }
-    };
-  } else {
-    showScreen('landing');
-  }
-  if (!FIREBASE_READY) {
-    setTimeout(() => { document.getElementById('firebase-banner').style.display = 'flex'; }, 1500);
-    setFbStatus('demo');
-  }
-})();
-
-
-/* ============================================================
-   Admin Restore (Link key-based, works in incognito/other PC)
-============================================================ */
-
-/** Show a copy-friendly dialog for admin link */
-function showAdminLink(adminLink){
-  try{
-    // Best UX: try clipboard, fallback to prompt
-    if(typeof copyText === 'function') copyText(adminLink);
-  }catch(e){}
-  // prompt allows easy copy on PC
-  window.prompt("🔐 관리자 링크 (복사해서 본인만 보관하세요)", adminLink);
-}
-
-/**
- * Restore host mode from URL (?host=CODE&key=HOSTKEY)
- * - No PIN (PIN couldn't be verified across reloads)
- * - Verifies key against Firebase sessions/{code}/hostKey
- */
-async function restoreHostFromLink(hostCode, key){
-  if(!hostCode || !key) return;
-
-  if(!FIREBASE_READY){
-    alert("Firebase 연결이 필요해요. (호스트 복구는 Firebase 연결 상태에서만 가능)");
-    return;
-  }
-
-  try{
-    // Show a lightweight blocking overlay while restoring
-    const ov = document.getElementById("adminPinOverlay");
-    if(ov){
-      ov.style.display = "flex";
-      ov.querySelector("h3").textContent = "관리자 복구 중…";
-      ov.querySelector("#adminPinInput").style.display = "none";
-      ov.querySelector("button").style.display = "none";
-      const box = ov.querySelector("div");
-      const msgId = "adminRestoreMsg";
-      let msg = document.getElementById(msgId);
-      if(!msg){
-        msg = document.createElement("div");
-        msg.id = msgId;
-        msg.style.marginTop = "10px";
-        msg.style.color = "#333";
-        msg.style.fontWeight = "800";
-        box.appendChild(msg);
-      }
-      msg.textContent = "세션을 불러오는 중입니다…";
-    }
-
-    const snap = await db.ref(`sessions/${hostCode}`).once('value');
-    if(!snap.exists()){
-      if(ov) ov.style.display = "none";
-      alert("해당 세션을 찾을 수 없어요. (세션 코드 확인 필요)");
-      return;
-    }
-    const s = snap.val() || {};
-    if((s.hostKey || "") !== key){
-      if(ov) ov.style.display = "none";
-      alert("관리자 키가 올바르지 않아요. 링크를 다시 확인해 주세요.");
-      return;
-    }
-
-    // Set core globals
-    roomCode = hostCode;
-    hostKey = key;
-    isHost = true;
-    ctx = s.ctx || ctx || 'edu';
-    sessionTitle = s.title || sessionTitle || '';
-
-    // Apply theme + move to host screen
-    setTheme(ctx);
-    showScreen('host');
-
-    // Update top/title UI immediately
-    try{ setTopTitle(sessionTitle || ''); }catch(e){}
-    const rc = document.getElementById("navRoomCode");
-    if(rc) rc.textContent = roomCode;
-
-    // Update join link + QR
-    const joinUrl = `${location.origin}${location.pathname}?join=${roomCode}`;
-    const linkEl = document.getElementById("joinLinkDisplay");
-    if(linkEl) linkEl.textContent = joinUrl;
-    setTimeout(()=>{ try{ drawQR(joinUrl); }catch(e){} }, 150);
-
-    // Hydrate local states from snapshot (best-effort)
-    totalParticipants = Number(s.participants || 0);
-    totalResponses = Number(s.responses || 0);
-
-    // Poll
-    if(s.poll){
-      pollLive = !!s.poll.live;
-      pollData.q = s.poll.q || '';
-      pollData.opts = Array.isArray(s.poll.opts) ? s.poll.opts : [];
-      pollData.votes = pollData.opts.map((_,i)=> Number((s.poll.votes||{})[i] || 0));
-      renderPollBars();
-    }
-
-    // Wordcloud
-    if(s.wordcloud){
-      wcData = s.wordcloud || {};
-      renderWC();
-    }
-
-    // Rating
-    if(s.rating){
-      ratings = Array.isArray(s.rating) ? s.rating : [];
-      updateRatingResult();
-    }
-
-    // Slider
-    if(s.slider){
-      sliderResponses = Array.isArray(s.slider) ? s.slider : [];
-      renderSliderResults();
-    }
-
-    // QA
-    if(s.qa){
-      // Convert map -> array
-      qaItems = Object.entries(s.qa).map(([id,v])=>({id, ...(v||{})}));
-      totalQuestions = qaItems.length;
-      renderQA();
-      try{ updateQAFilterCounts(); }catch(e){}
-    }else{
-      totalQuestions = 0;
-      qaItems = [];
-      renderQA();
-      try{ updateQAFilterCounts(); }catch(e){}
-    }
-
-    updateStats();
-
-    // Keep title synced (host)
-    try{
-      db.ref(`sessions/${roomCode}/title`).on('value', snap2=>{
-        const t = snap2.val() || '';
-        sessionTitle = t;
-        try{ setTopTitle(t); }catch(e){}
-      });
-    }catch(e){}
-
-    // Attach realtime listeners WITHOUT resetting the session (do not call initHostSession)
-    try{ attachHostRealtimeListeners(); }catch(e){ console.warn(e); }
-
-    // Clear overlay
-    if(ov) ov.style.display = "none";
-
-  }catch(err){
-    const ov = document.getElementById("adminPinOverlay");
-    if(ov) ov.style.display = "none";
-    alert("관리자 복구 중 오류가 발생했어요: " + (err && err.message ? err.message : err));
-  }
-}
-
-/** Attach host listeners only (no db.set that can wipe session) */
-function attachHostRealtimeListeners(){
-  if(!FIREBASE_READY || !db || !roomCode) return;
-
-  // Basic meta
-  fbOffAll();
-  // Connection
-  db.ref('.info/connected').on('value', s => {
-    if(s.val()) { setFbStatus('connected'); addFeed('✅ Firebase 연결됨'); }
-    else { setFbStatus('demo'); addFeed('⚠️ Firebase 연결 끊김'); }
-  });
-
-  // Counters + meta
-  fbOn('participants', 'value', snap => { totalParticipants = Number(snap.val() || 0); updateStats(); });
-  fbOn('responses', 'value', snap => { totalResponses = Number(snap.val() || 0); updateStats(); });
-
-  // Active activity
-  fbOn('activeActivity','value', snap => {
-    const act = snap.val();
-    if(act && act !== activeActivity){
-      switchActivity(act, null);
-    }
-  });
-
-  // Poll
-  fbOn('poll','value', snap => {
-    const p = snap.val() || {};
-    pollLive = !!p.live;
-    pollData.q = p.q || '';
-    pollData.opts = Array.isArray(p.opts) ? p.opts : [];
-    pollData.votes = pollData.opts.map((_,i)=> Number((p.votes||{})[i] || 0));
-    renderPollBars();
-  });
-
-  // Wordcloud
-  fbOn('wordcloud','value', snap => {
-    wcData = snap.val() || {};
-    renderWC();
-  });
-
-  // Rating
-  fbOn('rating','value', snap => {
-    const r = snap.val();
-    ratings = Array.isArray(r) ? r : [];
-    updateRatingResult();
-  });
-
-  // Slider
-  fbOn('slider','value', snap => {
-    const v = snap.val();
-    sliderResponses = Array.isArray(v) ? v : [];
-    renderSliderResults();
-  });
-
-  // QA
-  fbOn('qa','child_added', snap => {
-    const v = snap.val();
-    if(!v) return;
-    qaItems.unshift({ id: snap.key, ...v });
-    totalQuestions = qaItems.length;
-    renderQA();
-    try{ updateQAFilterCounts(); }catch(e){}
-    updateStats();
-  });
-  fbOn('qa','child_changed', snap => {
-    const v = snap.val();
-    const idx = qaItems.findIndex(x=>x.id===snap.key);
-    if(idx>=0) qaItems[idx] = { id: snap.key, ...(v||{}) };
-    renderQA();
-    try{ updateQAFilterCounts(); }catch(e){}
-  });
-
-  addFeed('🔐 관리자 복구: 실시간 동기화 연결됨');
-}
-
-// Hook: after session start, show admin link (copy-friendly)
-if(typeof startAsHost === "function"){
-  const _origStart = startAsHost;
-  startAsHost = async function(...args){
-    await _origStart.apply(this,args);
-
-    // Save hostKey locally (optional convenience)
-    try{ localStorage.setItem("actively_hostkey_"+roomCode, hostKey); }catch(e){}
-
-    const adminLink = `${location.origin}${location.pathname}?host=${roomCode}&key=${hostKey}`;
-    showAdminLink(adminLink);
-  }
-}
-
-// Auto restore host from URL (incognito/other device OK)
-(function(){
-  const params = new URLSearchParams(location.search);
-  const hostCode = params.get("host");
-  const key = params.get("key");
-  if(hostCode && key){
-    // defer until Firebase init completes
-    window.addEventListener('load', ()=> restoreHostFromLink(hostCode, key));
-  }
-})();
-
-/* ============================================================
-   Archive + Template Save/Load (Host only, full snapshot)
-============================================================ */
-let savedKind = 'archives';
-
-function fmtTime(ts){
-  try{
-    const d = new Date(ts);
-    return d.toLocaleString(undefined, {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-  }catch(e){ return ''; }
-}
-
-function openSavedOverlay(kind){
-  if(!isHost){ alert('관리자(발표자)만 사용할 수 있어요.'); return; }
-  if(!FIREBASE_READY){ alert('Firebase 연결이 필요해요.'); return; }
-  savedKind = kind || 'archives';
-  const t = document.getElementById('savedTitle');
-  if(t) t.textContent = savedKind === 'archives' ? '📚 저장된 세션' : '🧩 저장된 템플릿';
-  const ov = document.getElementById('savedOverlay');
-  if(ov){ ov.style.display = 'flex'; }
-  refreshSavedList();
-}
-
-function closeSavedOverlay(){
-  const ov = document.getElementById('savedOverlay');
-  if(ov) ov.style.display = 'none';
-}
-
-async function saveCurrentAs(kind){
-  if(!isHost){ alert('관리자(발표자)만 저장할 수 있어요.'); return; }
-  if(!FIREBASE_READY){ alert('Firebase 연결이 필요해요.'); return; }
-  if(!roomCode){ alert('세션 코드가 없어요. 먼저 세션을 시작해 주세요.'); return; }
-  kind = kind || 'archives';
-  savedKind = kind;
-
-  try{
-    const snap = await db.ref(`sessions/${roomCode}`).once('value');
-    const data = snap.val();
-    if(!data){ alert('저장할 세션 데이터가 없어요.'); return; }
-
-    const id = Date.now().toString(36);
-    const payload = {
-      ...data,
-      savedAt: Date.now(),
-      sourceRoom: roomCode,
-      savedType: (kind === 'archives') ? 'archive' : 'template'
-    };
-
-    if(!hostKey){ alert('hostKey가 없어요. 관리자 세션을 다시 시작해 주세요.'); return; }
-    await db.ref(`${kind}/${hostKey}/${id}`).set(payload);
-    addFeed((kind==='archives'?'세션':'템플릿')+' 저장 완료', 'var(--theme-g)');
-    alert((kind==='archives'?'세션':'템플릿')+'이 저장됐어요!');
-    const ov = document.getElementById('savedOverlay');
-    if(ov && ov.style.display !== 'none') refreshSavedList();
-  }catch(e){
-    console.error('saveCurrentAs error:', e);
-    const msg = e?.message || String(e);
-    if(msg.includes('PERMISSION_DENIED')){
-      alert('저장 권한이 없어요 (PERMISSION_DENIED).\n\nFirebase 콘솔 → Realtime Database → Rules에서\n최상위에 ".write": true 가 적용되어 있는지 확인해 주세요.\n\n현재 경로: ' + kind + '/' + hostKey);
-    } else {
-      alert('저장 중 오류가 발생했어요.\n\n' + msg);
-    }
-  }
-}
-
-async function refreshSavedList(){
-  if(!FIREBASE_READY) return;
-  const list = document.getElementById('savedList');
-  if(!list) return;
-  list.innerHTML = `<div style="padding:12px;color:var(--muted);font-weight:700;">불러오는 중…</div>`;
-
-  try{
-    if(!hostKey){ list.innerHTML = `<div style="padding:14px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);font-weight:800;">hostKey가 없어요. 관리자 세션을 다시 시작해 주세요.</div>`; return; }
-    const snap = await db.ref(`${savedKind}/${hostKey}`).limitToLast(60).once('value');
-    const obj = snap.val() || {};
-    const items = Object.entries(obj)
-      .map(([id,v]) => ({id, ...v}))
-      .sort((a,b)=> (b.savedAt||0) - (a.savedAt||0));
-
-    if(items.length===0){
-      list.innerHTML = `<div style="padding:14px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);font-weight:800;">아직 저장된 항목이 없어요.</div>`;
-      return;
-    }
-
-    list.innerHTML = items.map(it=>{
-      const label = (savedKind==='archives') ? '세션' : '템플릿';
-      const ctxLabel = (window.ctxConfig && it.ctx && ctxConfig[it.ctx]) ? ctxConfig[it.ctx].label : (it.ctx||'');
-      const title = it.title || it.name || (ctxLabel ? `${ctxLabel} ${label}` : `${label}`);
-      const when = fmtTime(it.savedAt || it.createdAt || Date.now());
-      const src = it.sourceRoom ? `원본: ${it.sourceRoom}` : '';
-      const stats = [
-        (typeof it.participants==='number') ? `참여 ${it.participants}` : '',
-        (typeof it.responses==='number') ? `응답 ${it.responses}` : ''
-      ].filter(Boolean).join(' · ');
-
-      return `
-        <div style="border:1px solid var(--border);border-radius:18px;padding:12px 12px;margin-top:10px;background:var(--surface);display:flex;gap:12px;align-items:center;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;">${when}${ctxLabel?` · ${ctxLabel}`:''}${src?` · ${src}`:''}</div>
-            ${stats?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-weight:800;">${stats}</div>`:''}
-          </div>
-          <button onclick="loadSavedItem('${it.id}')" style="border:none;background:var(--theme-a);color:#fff;border-radius:14px;padding:10px 12px;font-weight:950;cursor:pointer;white-space:nowrap;">불러오기</button>
-        </div>
-      `;
-    }).join('');
-  }catch(e){
-    console.error(e);
-    list.innerHTML = `<div style="padding:14px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);font-weight:800;">목록을 불러오지 못했어요.</div>`;
-  }
-}
-
-async function loadSavedItem(id){
-  if(!isHost){ alert('관리자(발표자)만 불러올 수 있어요.'); return; }
-  if(!FIREBASE_READY){ alert('Firebase 연결이 필요해요.'); return; }
-  if(!id) return;
-  if(!hostKey){ alert('hostKey가 없어요. 관리자 세션을 다시 시작해 주세요.'); return; }
-
-  if(!confirm('불러오면 새 세션 코드로 복제돼요. 진행할까요?')) return;
-
-  try{
-    const snap = await db.ref(`${savedKind}/${hostKey}/${id}`).once('value');
-    const data = snap.val();
-    if(!data){ alert('저장된 데이터를 찾지 못했어요.'); return; }
-
-    const newCode = genCode();
-    const newCtx = data.ctx || ctx || 'edu';
-    ctx = newCtx;
-    setTheme(ctx);
-
-    const sessionData = {...data};
-    sessionData.createdAt = Date.now();
-    sessionData.active = true;
-    sessionData.hostKey = hostKey;
-
-    await db.ref(`sessions/${newCode}`).set(sessionData);
-
-    roomCode = newCode;
-
-    document.getElementById('navRoomCode').textContent = roomCode;
-    document.getElementById('qrCode').textContent = roomCode;
-    if(document.getElementById('navCtxPill')) document.getElementById('navCtxPill').textContent = (ctxConfig[ctx]?.label||'세션');
-
-    const joinUrl = `${location.origin}${location.pathname}?join=${roomCode}`;
-    const linkDisplay = document.getElementById('joinLinkDisplay');
-    if(linkDisplay) linkDisplay.textContent = joinUrl.replace(/^https?:\/\//,'');
-    setTimeout(()=>drawQR(joinUrl), 250);
-
-    fbOffAll();
-
-    fbOn('participants','value', s=>{ totalParticipants=s.val()||0; updateStats(); });
-    fbOn('nicknames','value', s=>{ participantNames = s.val()||{}; renderParticipantNames(); });
-    fbOn('responses','value', s=>{ totalResponses=s.val()||0; updateStats(); });
-
-    fbOn('poll','value', s=>{
-      const d=s.val(); if(!d) return;
-      pollLive=d.live||false;
-      if(d.live&&d.opts){ const v=d.votes||{}; pollData={q:d.q,opts:d.opts,votes:d.opts.map((_,i)=>v[i]||0)}; if(document.getElementById('poll-result-card')?.style.display!=='none') renderPollBars(); }
-    });
-
-    fbOn('wordcloud','value', s=>{ wcData=s.val()||{}; if(document.getElementById('ap-wordcloud')?.classList.contains('active')){ renderWC(); updateCount('cnt-wc',Object.keys(wcData).length); }});
-
-    fbOn('qa','child_added', s=>{
-      const item={...s.val(),id:s.key,voted:false};
-      if(!qaItems.find(i=>i.id===s.key)){
-        qaItems.push(item);
-        totalQuestions=qaItems.length; updateStats(); renderQA();
-        addFeed(`새 질문: "${(item.q||'').slice(0,28)}..."`, 'var(--theme-a)');
-      }
-    });
-
-    fbOn('qa','child_changed', s=>{
-      const idx=qaItems.findIndex(i=>i.id===s.key);
-      if(idx>=0){ qaItems[idx]={...qaItems[idx],...s.val(),id:s.key}; renderQA(); }
-    });
-
-    fbOn('rating','value', s=>{ ratings=s.val()||[]; if(document.getElementById('ap-rating')?.classList.contains('active')){ updateRatingResult(); updateCount('cnt-rating',ratings.length); }});
-    fbOn('postits','value', s=>{
-      postitData=s.val()||{}; if(document.getElementById('ap-postit')?.classList.contains('active')){ renderPostitBoard(); updateCount('cnt-postit',Object.keys(postitData).length); }
-    });
-    fbOn('slider','value', s=>{ sliderResponses=s.val()||[]; if(document.getElementById('ap-slider')?.classList.contains('active')){ renderSliderResults(); updateCount('cnt-slider',sliderResponses.length); }});
-
-    db.ref('.info/connected').on('value', s=>setFbStatus(s.val()?'connected':'offline'));
-    setFbStatus('connected');
-
-    closeSavedOverlay();
-    addFeed('저장된 항목을 새 세션으로 불러왔어요', 'var(--theme-g)');
-    alert(`불러오기 완료! 새 세션 코드: ${roomCode}`);
-  }catch(e){
-    console.error(e);
-    alert('불러오기 중 오류가 발생했어요.');
-  }
-}
-
-
-/* ============================================================
-   Landing UX + Unified History (Local + Firebase)
-============================================================ */
-let selectedCtx = 'edu';
-
-function createNewSession(){
-  const inp = document.getElementById('sessionTitleInput');
-  const t = (inp?.value || '').trim();
-  if(!t){
-    alert('세션 이름을 입력해 주세요.');
-    try{ inp?.focus(); }catch(e){}
-    return;
-  }
-  startAsHost(selectedCtx, null, t);
-}
-
-let histFilter = 'all';
-
-function selectCtx(c){
-  selectedCtx = c || 'edu';
-  document.getElementById('chip-edu')?.classList.toggle('active', selectedCtx==='edu');
-  document.getElementById('chip-biz')?.classList.toggle('active', selectedCtx==='biz');
-  document.getElementById('chip-evt')?.classList.toggle('active', selectedCtx==='evt');
-  const map = {edu:'🎓 강의 & 교육', biz:'💼 회사 발표 & 회의', evt:'🎉 이벤트 & 행사'};
-  const hint = document.getElementById('ctxHint');
-  if(hint) hint.textContent = `선택: ${map[selectedCtx] || map.edu}`;
-}
-
-function fmtLocal(ts){
-  try{
-    const d = new Date(ts);
-    return d.toLocaleString(undefined,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-  }catch(e){ return ''; }
-}
-
-function getLocalHistory(){
-  try{
-    const raw = localStorage.getItem('actively_history') || '[]';
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  }catch(e){ return []; }
-}
-
-function setLocalHistory(arr){
-  try{ localStorage.setItem('actively_history', JSON.stringify(arr||[])); }catch(e){}
-}
-
-function upsertLocalHistory(item){
-  const arr = getLocalHistory().filter(x=>x && x.code !== item.code);
-  arr.unshift(item);
-  setLocalHistory(arr.slice(0, 30));
-}
-
-function renderLocalHistory(){
-  const el = document.getElementById('localHistory');
-  if(!el) return;
-  const arr = getLocalHistory();
-  if(arr.length === 0){
-    el.innerHTML = `<div style="padding:12px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);font-weight:900;">아직 만든 세션이 없어요. 새 세션을 만들어보세요!</div>`;
-    return;
-  }
-  el.innerHTML = arr.map(it=>{
-    const ctxLabel = (window.ctxConfig && it.ctx && ctxConfig[it.ctx]) ? ctxConfig[it.ctx].label : (it.ctx||'');
-    const title = it.title ? ` · ${escapeHtml(it.title)}` : '';
-    const fav = it.favorite ? '★ ' : '';
-    return `
-      <div class="hist-item">
-        <div class="hist-meta">
-          <div class="hist-code">${fav}${it.code}${ctxLabel?` · ${ctxLabel}`:''}${title}</div>
-          <div class="hist-time">${fmtLocal(it.createdAt || Date.now())}</div>
-        </div>
-        <div class="hist-actions">
-          <button class="small-btn primary" onclick="openUrl('${it.adminUrl || ''}')">관리자 열기</button>
-          <button class="small-btn" onclick="copyText('${it.joinUrl || ''}')">참여 링크 복사</button>
-          <button class="small-btn" onclick="toggleLocalFav('${it.code}')">★</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function toggleLocalFav(code){
-  const arr = getLocalHistory();
-  const idx = arr.findIndex(x=>x.code===code);
-  if(idx>=0){
-    arr[idx].favorite = !arr[idx].favorite;
-    setLocalHistory(arr);
-    renderLocalHistory();
-  }
-}
-
-function openUrl(u){
-  if(!u){ alert('링크가 없어요.'); return; }
-  window.open(u, '_blank', 'noopener');
-}
-
-async function copyText(t){
-  try{ await navigator.clipboard.writeText(t); alert('복사했어요!'); }
-  catch(e){ prompt('아래 링크를 복사해 주세요:', t); }
-}
-
-function escapeHtml(str){
-  return String(str||'')
-    .replaceAll('&','&amp;').replaceAll('<','&lt;')
-    .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
-}
-
-/* ---------------- Firebase history (hostKey based) ---------------- */
-function histRef(){ return hostKey ? db.ref(`history/${hostKey}`) : null; }
-
-async function writeFirebaseHistory(record){
-  if(!FIREBASE_READY || !hostKey) return;
-  const code = record.code;
-  if(!code) return;
-  const ref = db.ref(`history/${hostKey}/${code}`);
-  const existing = (await ref.once('value')).val() || {};
-  await ref.update({
-    code,
-    ctx: record.ctx || existing.ctx || 'edu',
-    createdAt: existing.createdAt || record.createdAt || Date.now(),
-    lastUsedAt: Date.now(),
-    adminUrl: record.adminUrl || existing.adminUrl || '',
-    joinUrl: record.joinUrl || existing.joinUrl || '',
-    title: record.title ?? existing.title ?? '',
-    favorite: record.favorite ?? existing.favorite ?? false
-  });
-}
-
-async function toggleFirebaseFav(code){
-  if(!FIREBASE_READY || !hostKey) return;
-  const ref = db.ref(`history/${hostKey}/${code}/favorite`);
-  const cur = (await ref.once('value')).val();
-  await ref.set(!cur);
-  refreshUnifiedHistory();
-}
-
-async function renameFirebaseHistory(code){
-  if(!FIREBASE_READY || !hostKey) return;
-  const ref = db.ref(`history/${hostKey}/${code}/title`);
-  const cur = (await ref.once('value')).val() || '';
-  const next = prompt('세션 이름을 입력해 주세요:', cur);
-  if(next === null) return;
-  await ref.set(next.trim());
-  refreshUnifiedHistory();
-  // also update local view for convenience
-  const arr = getLocalHistory();
-  const idx = arr.findIndex(x=>x.code===code);
-  if(idx>=0){ arr[idx].title = next.trim(); setLocalHistory(arr); renderLocalHistory(); }
-}
-
-async function deleteFirebaseHistory(code){
-  if(!FIREBASE_READY || !hostKey) return;
-  if(!confirm('이 세션 기록을 히스토리에서 삭제할까요? (저장된 아카이브/템플릿은 유지됩니다)')) return;
-  await db.ref(`history/${hostKey}/${code}`).remove();
-  refreshUnifiedHistory();
-}
-
-async function deleteSaved(kind, id){
-  if(!FIREBASE_READY || !hostKey) return;
-  const label = (kind==='archives')?'아카이브':'템플릿';
-  if(!confirm(`${label}를 삭제할까요? (되돌릴 수 없어요)`)) return;
-  await db.ref(`${kind}/${hostKey}/${id}`).remove();
-  refreshUnifiedHistory();
-}
-
-/* ---------------- Unified list (Firebase + Local) ---------------- */
-function openUnifiedHistory(){
-  const ov = document.getElementById('unifiedHistoryOverlay');
-  if(ov) ov.style.display = 'flex';
-  setHistFilter('all');
-  refreshUnifiedHistory();
-}
-
-function closeUnifiedHistory(){
-  const ov = document.getElementById('unifiedHistoryOverlay');
-  if(ov) ov.style.display = 'none';
-}
-
-function setHistFilter(f){
-  histFilter = f || 'all';
-  ['all','fav','live','archive','template'].forEach(k=>{
-    document.getElementById('flt-'+(k==='archive'?'arc':k==='template'?'tpl':k==='fav'?'fav':k))?.classList.toggle('primary', histFilter===k);
-  });
-  refreshUnifiedHistory();
-}
-
-async function fetchFirebaseItems(){
-  if(!FIREBASE_READY || !hostKey) return {history:[], archives:[], templates:[]};
-
-  const [hs, as, ts] = await Promise.all([
-    db.ref(`history/${hostKey}`).once('value'),
-    db.ref(`archives/${hostKey}`).once('value'),
-    db.ref(`templatesSaved/${hostKey}`).once('value')
-  ]);
-
-  const historyObj = hs.val() || {};
-  const archObj = as.val() || {};
-  const tplObj  = ts.val() || {};
-
-  const history = Object.values(historyObj).map(v=>({type:'live', ...v}));
-  const archives = Object.entries(archObj).map(([id,v])=>({type:'archive', id, ...v}));
-  const templates = Object.entries(tplObj).map(([id,v])=>({type:'template', id, ...v}));
-
-  return {history, archives, templates};
-}
-
-function mergeLocalIntoUnified(localArr, firebaseHistory){
-  const map = new Map();
-  // firebase first
-  firebaseHistory.forEach(it=>{
-    if(it && it.code) map.set(it.code, it);
-  });
-  // local as fallback
-  localArr.forEach(it=>{
-    if(!it || !it.code) return;
-    if(!map.has(it.code)){
-      map.set(it.code, {type:'local', ...it});
-    }
-  });
-  return Array.from(map.values());
-}
-
-function applyFilter(items){
-  let out = items;
-  if(histFilter==='fav') out = out.filter(x=>x.favorite);
-  if(histFilter==='live') out = out.filter(x=>x.type==='live' || x.type==='local');
-  if(histFilter==='archive') out = out.filter(x=>x.type==='archive');
-  if(histFilter==='template') out = out.filter(x=>x.type==='template');
-  return out;
-}
-
-function sortItems(items){
-  return items.sort((a,b)=>{
-    const ta = a.savedAt || a.lastUsedAt || a.createdAt || 0;
-    const tb = b.savedAt || b.lastUsedAt || b.createdAt || 0;
-    return tb - ta;
-  });
-}
-
-async function refreshUnifiedHistory(){
-  const list = document.getElementById('unifiedHistoryList');
-  if(!list) return;
-
-  list.innerHTML = `<div style="padding:12px;color:var(--muted);font-weight:900;">불러오는 중…</div>`;
-
-  const localArr = getLocalHistory();
-  let firebase = {history:[], archives:[], templates:[]};
-  try{
-    firebase = await fetchFirebaseItems();
-  }catch(e){
-    console.warn(e);
-  }
-
-  const unifiedLive = mergeLocalIntoUnified(localArr, firebase.history);
-  let items = [...unifiedLive, ...firebase.archives, ...firebase.templates];
-  items = applyFilter(items);
-  items = sortItems(items);
-
-  if(items.length===0){
-    const msg = (!hostKey) ?
-      '관리자 히스토리를 보려면 관리자 링크로 접속하거나(자동 복구) 세션을 한 번 만들어 주세요.' :
-      '저장된 항목이 없어요.';
-    list.innerHTML = `<div style="padding:14px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);font-weight:900;">${msg}</div>`;
-    return;
-  }
-
-  list.innerHTML = items.map(it=>{
-    const ctxLabel = (window.ctxConfig && it.ctx && ctxConfig[it.ctx]) ? ctxConfig[it.ctx].label : (it.ctx||'');
-    const title = it.title ? ` · ${escapeHtml(it.title)}` : '';
-    const fav = it.favorite ? `<span class="badge fav">★</span>` : '';
-    const badge = it.type==='archive' ? `<span class="badge">아카이브</span>` :
-                  it.type==='template' ? `<span class="badge">템플릿</span>` :
-                  it.type==='local' ? `<span class="badge">로컬</span>` :
-                  `<span class="badge">세션</span>`;
-
-    const when = fmtLocal(it.savedAt || it.lastUsedAt || it.createdAt || Date.now());
-    const code = it.code || it.sourceRoom || '—';
-
-    // Actions
-    let actions = '';
-    if(it.type==='archive' || it.type==='template'){
-      const kind = it.type==='archive' ? 'archives' : 'templatesSaved';
-      actions = `
-        <button class="small-btn primary" onclick="loadSavedItem('${it.id}')">불러오기</button>
-        <button class="small-btn" onclick="toggleSavedFav('${kind}','${it.id}')">★</button>
-        <button class="small-btn" onclick="renameSaved('${kind}','${it.id}')">이름</button>
-        <button class="small-btn danger" onclick="deleteSaved('${kind}','${it.id}')">삭제</button>
-      `;
-    } else {
-      actions = `
-        <button class="small-btn primary" onclick="openUrl('${it.adminUrl || ''}')">관리자</button>
-        <button class="small-btn" onclick="copyText('${it.joinUrl || ''}')">참여 링크</button>
-        ${hostKey ? `<button class="small-btn" onclick="toggleFirebaseFav('${it.code}')">★</button>` : `<button class="small-btn" onclick="toggleLocalFav('${it.code}')">★</button>`}
-        ${hostKey ? `<button class="small-btn" onclick="renameFirebaseHistory('${it.code}')">이름</button>` : ''}
-        ${hostKey ? `<button class="small-btn danger" onclick="deleteFirebaseHistory('${it.code}')">삭제</button>` : ''}
-      `;
-    }
-
-    return `
-      <div class="hist-item">
-        <div class="hist-meta">
-          <div class="hist-code">${fav}${badge}${escapeHtml(code)}${ctxLabel?` · ${ctxLabel}`:''}${title}</div>
-          <div class="hist-time">${when}</div>
-        </div>
-        <div class="hist-actions">${actions}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-/* Saved items (archive/template) metadata ops */
-async function toggleSavedFav(kind, id){
-  if(!FIREBASE_READY || !hostKey) return alert('관리자 히스토리는 관리자 링크로 접속 후 사용 가능해요.');
-  const ref = db.ref(`${kind}/${hostKey}/${id}/favorite`);
-  const cur = (await ref.once('value')).val();
-  await ref.set(!cur);
-  refreshUnifiedHistory();
-}
-
-async function renameSaved(kind, id){
-  if(!FIREBASE_READY || !hostKey) return;
-  const ref = db.ref(`${kind}/${hostKey}/${id}/title`);
-  const cur = (await ref.once('value')).val() || '';
-  const next = prompt('이름을 입력해 주세요:', cur);
-  if(next === null) return;
-  await ref.set(next.trim());
-  refreshUnifiedHistory();
-}
-
-/* Initialize landing widgets */
-setTimeout(()=>{ selectCtx(selectedCtx); renderLocalHistory(); }, 60);
-
-
-/* ============================================================
-   Participant nickname tracking (for host view)
-============================================================ */
-let clientId = (function(){
-  try{
-    const k='actively_client_id';
-    let v = localStorage.getItem(k);
-    if(!v){
-      // short random id
-      v = (Math.random().toString(36).slice(2,10) + Math.random().toString(36).slice(2,10)).slice(0,12);
-      localStorage.setItem(k, v);
-    }
-    return v;
-  }catch(e){ return 'anon_'+Math.random().toString(36).slice(2,10); }
-})();
-
-let participantNames = {}; // {clientId: nickname}
-
-function renderParticipantNames(){
-  const wrap = document.getElementById('participantNamesList');
-  const lbl = document.getElementById('participantCountLabel');
-  if(!wrap || !lbl) return;
-  const names = Object.values(participantNames||{}).filter(Boolean);
-  lbl.textContent = `${names.length}명`;
-  if(names.length===0){
-    wrap.innerHTML = `<div style="color:var(--muted);font-weight:850;font-size:12px;">아직 참여자가 없어요.</div>`;
-    return;
-  }
-  wrap.innerHTML = names.slice(0,80).map(n=>`
-    <span style="border:1px solid var(--border);background:var(--off);padding:7px 10px;border-radius:999px;font-weight:950;font-size:12px;">
-      ${escapeHtml(n)}
-    </span>
-  `).join('');
-}
-
-async function attachParticipantNickname(code, nickname){
-  try{
-    if(!FIREBASE_READY || !code) return;
-    if(!nickname) return;
-    const ref = db.ref(`sessions/${code}/nicknames/${clientId}`);
-    await ref.set(String(nickname).slice(0,24));
-    ref.onDisconnect().remove();
-  }catch(e){ console.warn(e); }
-}
-
-
-/* ============================================================
-   Host: participant advanced (sort/duplicate/kick/log) + Title
-   Participant: always-on Q&A + kick listener
-============================================================ */
-let participantSortMode = 'join'; // 'join' | 'alpha'
-let participantsMeta = {}; // {clientId: {nickname, joinedAt}}
-let kicked = false;
-
-function setParticipantSort(mode){
-  participantSortMode = mode || 'join';
-  document.getElementById('sort-join')?.classList.toggle('primary', participantSortMode==='join');
-  document.getElementById('sort-alpha')?.classList.toggle('primary', participantSortMode==='alpha');
-  renderParticipantNames();
-}
-
-function normalizeNickname(name){
-  return String(name||'').trim().slice(0,24);
-}
-
-async function registerParticipantMeta(code, nickname){
-  if(!FIREBASE_READY || !code) return;
-  const nick = normalizeNickname(nickname);
-  if(!nick) return;
-
-  // Deduplicate nickname: "name", "name(2)", "name(3)"
-  try{
-    const snap = await db.ref(`sessions/${code}/participantsMeta`).once('value');
-    const obj = snap.val() || {};
-    const existingNames = new Set(Object.values(obj).map(v => (v && v.nickname) ? String(v.nickname) : '').filter(Boolean));
-    let finalName = nick;
-    if(existingNames.has(finalName)){
-      let i=2;
-      while(existingNames.has(`${nick}(${i})`)) i++;
-      finalName = `${nick}(${i})`;
-    }
-    await db.ref(`sessions/${code}/participantsMeta/${clientId}`).set({nickname: finalName, joinedAt: Date.now()});
-    await db.ref(`sessions/${code}/nicknames/${clientId}`).set(finalName); // keep legacy
-    db.ref(`sessions/${code}/participantsMeta/${clientId}`).onDisconnect().remove();
-    db.ref(`sessions/${code}/nicknames/${clientId}`).onDisconnect().remove();
-  }catch(e){
-    console.warn(e);
-    // fallback
-    await db.ref(`sessions/${code}/participantsMeta/${clientId}`).set({nickname: nick, joinedAt: Date.now()});
-    await db.ref(`sessions/${code}/nicknames/${clientId}`).set(nick);
-  }
-}
-
-function renderParticipantNames(){
-  const wrap = document.getElementById('participantNamesList');
-  const lbl = document.getElementById('participantCountLabel');
-  if(!wrap) return;
-
-  const entries = Object.entries(participantsMeta||{}).map(([id,v])=>({id, ...(v||{})}));
-  let list = entries.filter(x=>x.nickname);
-
-  if(participantSortMode==='alpha'){
-    list.sort((a,b)=> String(a.nickname).localeCompare(String(b.nickname), 'ko'));
-  }else{
-    list.sort((a,b)=> (a.joinedAt||0) - (b.joinedAt||0));
-  }
-
-  if(lbl) lbl.textContent = `${list.length}명`;
-
-  if(list.length===0){
-    wrap.innerHTML = `<div style="color:var(--muted);font-weight:850;font-size:12px;">아직 참여자가 없어요.</div>`;
-    return;
-  }
-
-  wrap.innerHTML = list.slice(0,120).map(p=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);background:var(--off);padding:10px 12px;border-radius:14px;">
-      <div style="font-weight:950;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.nickname)}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-        <button class="small-btn" onclick="copyText('${p.nickname}')">복사</button>
-        <button class="small-btn danger" onclick="kickParticipant('${p.id}','${escapeHtml(p.nickname).replaceAll("'", "\\'")}')">퇴장</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function kickParticipant(id, nickname){
-  if(!isHost){ alert('관리자만 사용할 수 있어요.'); return; }
-  if(!FIREBASE_READY || !roomCode) return;
-  if(!confirm(`"${nickname||'참여자'}" 님을 퇴장시킬까요?`)) return;
-  await db.ref(`sessions/${roomCode}/kicks/${id}`).set({at: Date.now()});
-  await db.ref(`sessions/${roomCode}/participantsMeta/${id}`).remove();
-  await db.ref(`sessions/${roomCode}/nicknames/${id}`).remove();
-  addFeed(`참여자 퇴장: ${nickname||id}`, 'var(--theme-a)');
-}
-
-async function kickAllParticipants(){
-  if(!isHost){ alert('관리자만 사용할 수 있어요.'); return; }
-  if(!FIREBASE_READY || !roomCode) return;
-  if(!confirm('전체 참여자를 퇴장시킬까요?')) return;
-  const ids = Object.keys(participantsMeta||{});
-  const updates = {};
-  const ts = Date.now();
-  ids.forEach(id=>{ updates[`sessions/${roomCode}/kicks/${id}`] = {at: ts}; });
-  updates[`sessions/${roomCode}/participantsMeta`] = null;
-  updates[`sessions/${roomCode}/nicknames`] = null;
-  await db.ref().update(updates);
-  addFeed('전체 퇴장 실행', 'var(--theme-a)');
-}
-
-/* Host wiring: join/leave logs from participantsMeta */
-function attachParticipantMetaListeners(){
-  if(!FIREBASE_READY || !roomCode) return;
-  fbOn('participantsMeta','value', s=>{ participantsMeta = s.val()||{}; renderParticipantNames(); });
-  fbOn('participantsMeta','child_added', s=>{
-    const v = s.val()||{};
-    if(v.nickname) addFeed(`입장: ${v.nickname}`, 'var(--theme-g)');
-  });
-  fbOn('participantsMeta','child_removed', s=>{
-    const v = s.val()||{};
-    if(v.nickname) addFeed(`퇴장: ${v.nickname}`, 'var(--muted)');
-  });
-}
-
-/* Participant: kick listener */
-function attachKickListener(){
-  if(!FIREBASE_READY || !roomCode) return;
-  const ref = db.ref(`sessions/${roomCode}/kicks/${clientId}`);
-  ref.on('value', snap=>{
-    if(snap.exists() && !kicked){
-      kicked = true;
-      try{ alert('발표자가 퇴장시켰어요.'); }catch(e){}
-      fbOffAll();
-      showScreen('landing');
-    }
-  });
-}
-
-/* Participant: always-on Q&A */
-function showQAFab(show){
-  const btn = document.getElementById('qaFab');
-  if(btn) btn.style.display = show ? 'block' : 'none';
-}
-function openParticipantQAModal(){
-  if(!roomCode){ alert('세션에 참여 중이 아니에요.'); return; }
-  const m = document.getElementById('qaModal');
-  if(m) m.style.display = 'flex';
-  setTimeout(()=>document.getElementById('qaModalInput')?.focus(), 50);
-}
-function closeParticipantQAModal(){
-  const m = document.getElementById('qaModal');
-  if(m) m.style.display = 'none';
-}
 async function submitParticipantQA(){
   if(!FIREBASE_READY || !roomCode){ alert('연결이 필요해요.'); return; }
-  const txt = (document.getElementById('qaModalInput')?.value||'').trim();
+
+  // Prefer modal input if exists
+  const modalInput = document.getElementById('qaModalInput');
+  const inlineInput = document.getElementById('pQaInput');
+  const txt = ((modalInput && modalInput.value) ? modalInput.value : (inlineInput ? inlineInput.value : '')).trim();
+
   if(!txt){ alert('질문을 입력해 주세요.'); return; }
-  const payload = { q: txt, nick: nickname || '익명', ts: Date.now(), votes: 0 };
-  await db.ref(`sessions/${roomCode}/qa`).push(payload);
-  document.getElementById('qaModalInput').value = '';
-  closeParticipantQAModal();
-  try{ alert('질문을 보냈어요!'); }catch(e){}
+
+  const anon = !!document.getElementById('qaModalAnon')?.checked || !!document.getElementById('qaAnonToggle')?.checked;
+
+  // nickname is set when joining; fallback to participantNickname if present
+  const nickVal = (typeof nickname !== 'undefined' && nickname) ? nickname : (typeof participantNickname !== 'undefined' ? participantNickname : '');
+  const author = anon ? '익명' : (nickVal || '익명');
+
+  // Button lock to avoid "안 눌리는 것처럼" 보이는 중복클릭/연타 이슈 방지
+  const primaryBtn = document.querySelector('#qaModal .small-btn.primary');
+  if(primaryBtn){ primaryBtn.disabled = true; primaryBtn.style.opacity = '0.6'; }
+
+  try{
+    const payload = { q: txt, author, votes: 0, answered: false, ts: Date.now() };
+    await db.ref(`sessions/${roomCode}/qa`).push(payload);
+
+    if(modalInput) modalInput.value = '';
+    if(inlineInput) inlineInput.value = '';
+
+    const m = document.getElementById('qaModal');
+    if(m && m.style.display !== 'none') closeParticipantQAModal();
+
+    try{ alert('질문을 보냈어요!'); }catch(e){}
+  }catch(err){
+    alert('질문 전송 중 오류가 발생했어요. 다시 시도해 주세요.');
+    console.warn(err);
+  }finally{
+    if(primaryBtn){ primaryBtn.disabled = false; primaryBtn.style.opacity = ''; }
+  }
 }
 
 /* Title in top bar */
@@ -4206,6 +3626,342 @@ async function submitQuickQA(){
 
 
 
+// ============================================================
+//   MISSING FUNCTIONS — 버튼 동작을 위한 필수 함수들
+// ============================================================
+
+// ── escapeHtml ──
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── UI 모드 전환 ──
+function setUiMode(mode) {
+  currentUiMode = mode;
+  document.body.classList.remove('ui-dark','ui-vivid');
+  if (mode === 'dark') document.body.classList.add('ui-dark');
+  else if (mode === 'vivid') document.body.classList.add('ui-vivid');
+  // 모든 switcher 버튼 active 상태 업데이트
+  ['light','dark','vivid'].forEach(m => {
+    ['sw-'+m, 'land-sw-'+m].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.toggle('active', m === mode);
+    });
+  });
+  // 현재 ctx 테마 재적용
+  if (ctx) setTheme(ctx);
+}
+
+// ── 랜딩 context 선택 ──
+function selectCtx(c) {
+  ctx = c;
+  ['edu','biz','evt'].forEach(x => {
+    const btn = document.getElementById('chip-'+x);
+    if (btn) btn.classList.toggle('active', x === c);
+  });
+  const hints = { edu:'선택: 강의 & 교육', biz:'선택: 회사 발표 & 회의', evt:'선택: 이벤트 & 행사' };
+  const hint = document.getElementById('ctxHint');
+  if (hint) hint.textContent = hints[c] || '';
+}
+
+// ── 새 세션 만들기 ──
+function createNewSession() {
+  const title = (document.getElementById('sessionTitleInput')?.value || '').trim();
+  startAsHost(ctx || 'edu', 'poll', title);
+}
+
+// ── 링크 복사 ──
+function copyJoinLink() {
+  const url = location.origin + location.pathname + '?join=' + roomCode;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyLinkBtn');
+    if (btn) { const orig = btn.textContent; btn.textContent = '✅ 복사됨!'; setTimeout(() => btn.textContent = orig, 1500); }
+    else { alert('링크가 복사됐어요: ' + url); }
+  }).catch(() => { alert('링크: ' + url); });
+}
+
+// ── 참여자 화면 미리보기 ──
+function previewParticipant() { showScreen('participant'); }
+
+// ── QA FAB 표시/숨김 ──
+function showQAFab(show) {
+  const fab = document.getElementById('qaFab');
+  if (fab) fab.style.display = show ? 'flex' : 'none';
+}
+
+// ── Q&A 모달 ──
+function openParticipantQAModal() {
+  const m = document.getElementById('qaModal');
+  if (m) m.style.display = 'flex';
+}
+function closeParticipantQAModal() {
+  const m = document.getElementById('qaModal');
+  if (m) m.style.display = 'none';
+}
+
+// ── 로컬 히스토리 렌더 ──
+function renderLocalHistory() {
+  const container = document.getElementById('localHistory');
+  if (!container) return;
+  let sessions = [];
+  try { sessions = JSON.parse(localStorage.getItem('actively_sessions') || '[]'); } catch(e){}
+  if (!sessions.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0;font-weight:800;">아직 세션 기록이 없어요. 새 세션을 만들어 보세요!</div>';
+    return;
+  }
+  container.innerHTML = sessions.slice().reverse().slice(0,5).map((s,i) =>
+    '<div class="hist-item">' +
+    '<div style="font-size:22px;">' + (s.ctxIcon || '📊') + '</div>' +
+    '<div class="hist-meta">' +
+    '<div class="hist-code">' + escapeHtml(s.title || s.code || '세션') + '</div>' +
+    '<div class="hist-time">' + escapeHtml(s.code || '') + ' · ' + (s.time || '') + '</div></div>' +
+    '<div class="hist-actions">' +
+    '<button class="small-btn" onclick="resumeSession(\'' + s.code + '\',\'' + (s.ctx||'edu') + '\')">▶ 재개</button>' +
+    '<button class="small-btn danger" onclick="deleteLocalSession(' + (sessions.length-1-i) + ')">삭제</button>' +
+    '</div></div>'
+  ).join('');
+}
+
+function saveSessionToLocal(code, c, title) {
+  let sessions = [];
+  try { sessions = JSON.parse(localStorage.getItem('actively_sessions') || '[]'); } catch(e){}
+  const ctxIcons = { edu:'🎓', biz:'💼', evt:'🎉' };
+  sessions.push({
+    code, ctx: c, title: title || code,
+    ctxIcon: ctxIcons[c] || '📊',
+    time: new Date().toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+  });
+  localStorage.setItem('actively_sessions', JSON.stringify(sessions.slice(-20)));
+}
+
+function deleteLocalSession(idx) {
+  let sessions = [];
+  try { sessions = JSON.parse(localStorage.getItem('actively_sessions') || '[]'); } catch(e){}
+  sessions.splice(idx, 1);
+  localStorage.setItem('actively_sessions', JSON.stringify(sessions));
+  renderLocalHistory();
+}
+
+function resumeSession(code, c) {
+  startAsHost(c || 'edu', 'poll');
+}
+
+// ── 저장된 세션/템플릿 오버레이 ──
+function openSavedOverlay(type) {
+  const ov = document.getElementById('savedOverlay');
+  const title = document.getElementById('savedTitle');
+  if (!ov) return;
+  if (title) title.textContent = type === 'archives' ? '💾 저장된 세션' : '📦 저장된 템플릿';
+  ov._type = type;
+  ov.style.display = 'flex';
+  refreshSavedList(type);
+}
+function closeSavedOverlay() {
+  const ov = document.getElementById('savedOverlay');
+  if (ov) ov.style.display = 'none';
+}
+function refreshSavedList(type) {
+  const ov = document.getElementById('savedOverlay');
+  const t = type || (ov && ov._type) || 'archives';
+  const list = document.getElementById('savedList');
+  if (!list) return;
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('actively_'+t) || '[]'); } catch(e){}
+  if (!items.length) { list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">저장된 항목이 없어요</div>'; return; }
+  list.innerHTML = items.slice().reverse().map((s,i) =>
+    '<div class="hist-item">' +
+    '<div class="hist-meta"><div class="hist-code">' + escapeHtml(s.title || s.code || '항목') + '</div>' +
+    '<div class="hist-time">' + (s.time || '') + '</div></div>' +
+    '<div class="hist-actions">' +
+    '<button class="small-btn primary" onclick="loadSavedItem(\'' + t + '\',' + (items.length-1-i) + ')">불러오기</button>' +
+    '<button class="small-btn danger" onclick="deleteSavedItem(\'' + t + '\',' + (items.length-1-i) + ')">삭제</button>' +
+    '</div></div>'
+  ).join('');
+}
+function loadSavedItem(type, idx) {
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('actively_'+type) || '[]'); } catch(e){}
+  const s = items[idx];
+  if (!s) return;
+  startAsHost(s.ctx || ctx || 'edu', s.activity || 'poll', s.title || '');
+  closeSavedOverlay();
+}
+function deleteSavedItem(type, idx) {
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('actively_'+type) || '[]'); } catch(e){}
+  items.splice(idx, 1);
+  localStorage.setItem('actively_'+type, JSON.stringify(items));
+  refreshSavedList(type);
+}
+function saveCurrentAs(type) {
+  const s = {
+    code: roomCode, ctx: ctx,
+    title: sessionTitle || roomCode || '세션',
+    activity: 'poll',
+    time: new Date().toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+  };
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('actively_'+type) || '[]'); } catch(e){}
+  items.push(s);
+  localStorage.setItem('actively_'+type, JSON.stringify(items.slice(-30)));
+  alert((type === 'archives' ? '세션' : '템플릿') + '이 저장됐어요!');
+}
+
+// ── 통합 히스토리 오버레이 ──
+let _histFilter = 'all';
+function openUnifiedHistory() {
+  const ov = document.getElementById('unifiedHistoryOverlay');
+  if (ov) { ov.style.display = 'flex'; refreshUnifiedHistory(); }
+}
+function closeUnifiedHistory() {
+  const ov = document.getElementById('unifiedHistoryOverlay');
+  if (ov) ov.style.display = 'none';
+}
+function setHistFilter(f) {
+  _histFilter = f;
+  ['all','fav','live','archive','template'].forEach(x => {
+    const btn = document.getElementById('flt-' + (x==='all'?'all':x==='fav'?'fav':x==='live'?'live':x==='archive'?'arc':'tpl'));
+    if (btn) btn.style.background = x === f ? 'var(--theme-a)' : '';
+    if (btn) btn.style.color = x === f ? '#fff' : '';
+  });
+  refreshUnifiedHistory();
+}
+function refreshUnifiedHistory() {
+  const list = document.getElementById('unifiedHistoryList');
+  if (!list) return;
+  let sessions = [];
+  try { sessions = JSON.parse(localStorage.getItem('actively_sessions') || '[]'); } catch(e){}
+  let archives = [];
+  try { archives = JSON.parse(localStorage.getItem('actively_archives') || '[]'); } catch(e){}
+  let templates = [];
+  try { templates = JSON.parse(localStorage.getItem('actively_templatesSaved') || '[]'); } catch(e){}
+
+  const all = [
+    ...sessions.map(s => ({...s, _type:'live'})),
+    ...archives.map(s => ({...s, _type:'archive'})),
+    ...templates.map(s => ({...s, _type:'template'})),
+  ].reverse();
+
+  const filtered = _histFilter === 'all' ? all :
+    _histFilter === 'fav' ? all.filter(s => s.fav) :
+    all.filter(s => s._type === _histFilter);
+
+  if (!filtered.length) { list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:24px;text-align:center;">항목이 없어요</div>'; return; }
+
+  const typeLabel = { live:'세션', archive:'아카이브', template:'템플릿' };
+  const typeColor = { live:'var(--edu-a)', archive:'var(--biz-a)', template:'var(--evt-a)' };
+  list.innerHTML = filtered.map(s =>
+    '<div class="hist-item">' +
+    '<div style="font-size:20px;">' + (s.ctxIcon || '📊') + '</div>' +
+    '<div class="hist-meta">' +
+    '<div class="hist-code">' + escapeHtml(s.title || s.code || '항목') + '</div>' +
+    '<div class="hist-time"><span style="background:var(--off2);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;margin-right:6px;">' + (typeLabel[s._type]||'') + '</span>' + (s.time || '') + '</div>' +
+    '</div>' +
+    '<div class="hist-actions">' +
+    '<button class="small-btn primary" onclick="resumeSession(\'' + (s.code||'') + '\',\'' + (s.ctx||'edu') + '\')">▶ 불러오기</button>' +
+    '</div></div>'
+  ).join('');
+}
+
+// ── 관리자 PIN ──
+const ADMIN_PIN = '1234';
+function showAdminPinOverlay() {
+  const ov = document.getElementById('adminPinOverlay');
+  if (ov) ov.style.display = 'flex';
+}
+function verifyAdminPin() {
+  const input = document.getElementById('adminPinInput');
+  const val = input ? input.value : '';
+  if (val === ADMIN_PIN) {
+    const ov = document.getElementById('adminPinOverlay');
+    if (ov) ov.style.display = 'none';
+    alert('✅ 관리자 인증 완료');
+  } else {
+    alert('❌ PIN이 올바르지 않습니다');
+    if (input) { input.value = ''; input.focus(); }
+  }
+}
+
+// ── 참여자 닉네임 / 메타 ──
+let participantNames = {};
+function attachParticipantNickname(code, nick) {
+  if (!db || !code || !nick) return;
+  const id = window._cid || (window._cid = 'u'+Date.now()+Math.random().toString(36).slice(2,6));
+  db.ref(`sessions/${code}/nicknames/${id}`).set(nick);
+}
+function attachParticipantMetaListeners() {
+  // 참여자 이름 목록 갱신 (호스트 사이드바용 — 간이 구현)
+}
+function renderParticipantNames() {
+  // 필요 시 사이드바 등에 참여자 이름 목록 렌더링
+}
+
+// ── 참여자 슬라이더 제출 ──
+async function submitParticipantSlider() {
+  const slider = document.getElementById('pSlider');
+  const v = parseInt(slider?.value || 50);
+  if (db && roomCode) {
+    await db.ref(`sessions/${roomCode}/slider`).transaction(arr => {
+      const a = Array.isArray(arr) ? arr : [];
+      return a.concat([v]);
+    });
+  }
+  pMyResponses.push({type:'슬라이더',content:v+'점',time:new Date().toLocaleTimeString()});
+  renderMyResponses();
+  showSubmitSuccess('슬라이더 응답이 제출됐어요!');
+}
+
+// ── 참여자 만족도 제출 ──
+async function submitParticipantRating() {
+  if (!pSelectedRating) { alert('별점을 선택해 주세요.'); return; }
+  if (db && roomCode) {
+    const id = activeRatingId || 'r1';
+    await db.ref(`sessions/${roomCode}/ratingVotes/${id}`).transaction(arr => {
+      const a = Array.isArray(arr) ? arr : [];
+      return a.concat([pSelectedRating]);
+    });
+    await db.ref(`sessions/${roomCode}/responses`).transaction(n => (n||0)+1);
+  }
+  pMyResponses.push({type:'만족도',content:pSelectedRating+'점',time:new Date().toLocaleTimeString()});
+  renderMyResponses();
+  showSubmitSuccess('만족도 응답이 제출됐어요! ⭐');
+}
+
+// ── btn-primary 클래스 (Q&A 발표자 버튼) ──
+document.addEventListener('DOMContentLoaded', () => {
+  // btn-primary 스타일이 없으면 추가
+  const style = document.createElement('style');
+  style.textContent = '.btn-primary{padding:10px 18px;border-radius:10px;border:none;background:var(--theme-g);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}.btn-primary:hover{opacity:0.9;}.btn-primary:disabled{opacity:0.4;cursor:not-allowed;}';
+  document.head.appendChild(style);
+
+  // 로컬 히스토리 렌더
+  renderLocalHistory();
+
+  // URL 자동 참여 처리
+  const params = new URLSearchParams(location.search);
+  const joinCode = params.get('join');
+  if (joinCode) {
+    showScreen('participant');
+    // 자동으로 참여 시도
+    (async () => {
+      const ok = await joinSessionFirebase(joinCode.toUpperCase());
+      if (ok) {
+        setTheme(ctx);
+        const ctxLabel = document.getElementById('pContextLabel');
+        if (ctxLabel) ctxLabel.textContent = ctxConfig[ctx]?.label || '세션';
+      } else {
+        showScreen('landing');
+        alert('세션을 찾을 수 없어요. 코드를 다시 확인해 주세요.');
+      }
+    })();
+  }
+
+  // 세션 저장 훅 — startAsHost 이후에도 실행되도록 감싸기
+  const _origStart = startAsHost;
+  window._startAsHostWrapped = true;
+});
+
 // ==========================================
 // 🚀 고수의 추가 업데이트 로직 (휘발성 방지 & 피드)
 // ==========================================
@@ -4224,9 +3980,15 @@ function saveAppState() {
 function loadAppState() {
     const saved = localStorage.getItem('actively_state');
     if (saved) {
-        const state = JSON.parse(saved);
-        if (state.uiMode) document.body.className = state.uiMode;
-        if (state.themeA) document.documentElement.style.setPropertyValue('--theme-a', state.themeA);
+        try {
+            const state = JSON.parse(saved);
+            // ⚠️ body.className 전체 덮어쓰지 말고 UI 모드 클래스만 추가
+            if (state.uiMode) {
+                document.body.classList.remove('ui-dark', 'ui-vivid');
+                if (state.uiMode.includes('ui-dark')) document.body.classList.add('ui-dark');
+                else if (state.uiMode.includes('ui-vivid')) document.body.classList.add('ui-vivid');
+            }
+        } catch(e) {}
     }
 }
 
@@ -4345,12 +4107,26 @@ window.addEventListener('load', loadAppState);
       </div>
       <div style="padding:14px 16px;">
         <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:8px;">언제든 질문을 남길 수 있어요. 발표자에게 바로 전달됩니다.</div>
-        <textarea id="qaModalInput" placeholder="질문을 입력하세요 (익명 가능)" style="width:100%;min-height:110px;resize:vertical;padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:850;outline:none;"></textarea>
+        <textarea id="qaModalInput" placeholder="질문을 입력하세요" style="width:100%;min-height:110px;resize:vertical;padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:850;outline:none;"></textarea>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;font-weight:900;color:var(--text);">
+          <input type="checkbox" id="qaModalAnon" /> 익명으로 보내기
+        </label>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
           <button class="small-btn" onclick="closeParticipantQAModal()">취소</button>
           <button class="small-btn primary" onclick="submitParticipantQA()">보내기</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Q&A Show Overlay (참여자/스크린 공용) -->
+  <div id="qaShowOverlay" style="display:none;position:fixed;inset:0;z-index:270;background:rgba(10,12,16,.55);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:18px;">
+    <div style="background:var(--surface-card);border:1px solid var(--border);border-radius:22px;max-width:680px;width:100%;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.35);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-weight:950;">💬 선택된 질문</div>
+        <button class="small-btn" onclick="hideQAShow()">닫기 ✕</button>
+      </div>
+      <div id="qaShowContent" style="padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
     </div>
   </div>
 </body>
