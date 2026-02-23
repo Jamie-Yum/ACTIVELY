@@ -15,25 +15,8 @@
 //  🔥 FIREBASE 설정
 //  Firebase 콘솔(console.firebase.google.com)에서
 //  프로젝트 생성 후 아래 값을 교체하세요.
-//  자세한 방법: 아래 SETUP_GUIDE.md 파일 참고
 // ============================================================
 const FIREBASE_CONFIG = {
-   apiKey: "AIzaSyARGGo-suJzirH05rzHBoaAnuFwJ9ktqBI",
-  authDomain: "actively-9933.firebaseapp.com",
-  databaseURL: "https://actively-9933-default-rtdb.firebaseio.com",
-  projectId: "actively-9933",
-  storageBucket: "actively-9933.firebasestorage.app",
-  messagingSenderId: "168605815360",
-  appId: "1:168605815360:web:cb9ab26ccad9acf22a85a5",
-  measurementId: "G-VSJ273RTNC"
-};
-
-
-// 설정이 완료됐는지 체크
-const FIREBASE_READY = !FIREBASE_CONFIG.apiKey.includes('YOUR_');
-
-if (FIREBASE_READY) {
-  const firebaseConfig = {
   apiKey: "AIzaSyARGGo-suJzirH05rzHBoaAnuFwJ9ktqBI",
   authDomain: "actively-9933.firebaseapp.com",
   databaseURL: "https://actively-9933-default-rtdb.firebaseio.com",
@@ -44,7 +27,15 @@ if (FIREBASE_READY) {
   measurementId: "G-VSJ273RTNC"
 };
 
-firebase.initializeApp(FIREBASE_CONFIG);
+// ✅ 필수 값 존재 여부로 체크 (문자열 'YOUR_' 체크보다 안전)
+const FIREBASE_READY =
+  !!FIREBASE_CONFIG.apiKey &&
+  !!FIREBASE_CONFIG.projectId &&
+  !!FIREBASE_CONFIG.databaseURL;
+
+// ✅ initializeApp는 1번만
+if (FIREBASE_READY && !(firebase.apps && firebase.apps.length)) {
+  firebase.initializeApp(FIREBASE_CONFIG);
 }
 </script>
 <style>
@@ -69,6 +60,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
   --surface-card: #ffffff;
   --surface-nav:  #ffffff;
   --surface-sidebar: #ffffff;
+  --surface: var(--surface-card);
 
   /* borders */
   --border:  #e2dfd8;
@@ -2058,7 +2050,7 @@ async function joinSessionFirebase(code) {
           const q=ps.val()||'자유롭게 의견을 적어주세요!';
           if(!pTitle||!pContent) return;
           pTitle.textContent='📝 포스트잇';
-          pContent.innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text);">'+q+'</div>'+
+          pContent.innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text);">'+escapeHtml(q)+'</div>'+
             '<textarea id="pPostitInput" style="width:100%;min-height:100px;padding:12px;border-radius:12px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;resize:vertical;" placeholder="내용을 자유롭게 입력하세요..."></textarea>'+
             '<button onclick="submitParticipantPostit(\''+code+'\')" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:none;background:var(--theme-g);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">📌 붙이기</button>';
         });
@@ -2207,8 +2199,10 @@ function renderParticipantQuiz(code, questions, qIdx) {
         }
       });
     });
+    const tsSnapshot = pLastQuizTs;
     setTimeout(()=>{
-      if(!pQuizAnswered && pLastQuizTs===pLastQuizTs) {
+      // ✅ 이 화면이 렌더된 이후 다른 퀴즈가 시작됐다면 자동처리 방지
+      if(!pQuizAnswered && pLastQuizTs === tsSnapshot) {
         answerParticipantQuiz(-1, q.correct, code, qIdx);
       }
     }, duration);
@@ -2491,7 +2485,7 @@ function renderQA() {
   if(qaFilter==='unanswered') filtered=filtered.filter(i=>!i.answered);
   filtered.sort((a,b)=>b.votes-a.votes);
   if(!filtered.length){list.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">아직 질문이 없습니다</div>`;return;}
-  filtered.forEach(item=>{ const div=document.createElement('div'); div.className='qa-card'+(item.answered?' answered':''); div.innerHTML=`<div class="qa-q">${item.q}</div><div class="qa-footer"><div class="qa-author">익명</div><div class="qa-actions"><button class="up-btn ${item.voted?'voted':''}" onclick="upvote('${item.id}')">▲ ${item.votes}</button>${item.answered?'<span class="answered-tag">✓ 답변 완료</span>':`<button class="mark-answered-btn" onclick="markAnswered('${item.id}')">답변 완료</button>`}</div></div>`; list.appendChild(div); });
+  filtered.forEach(item=>{ const div=document.createElement('div'); div.className='qa-card'+(item.answered?' answered':''); div.innerHTML=`<div class="qa-q">${escapeHtml(item.q)}</div><div class="qa-footer"><div class="qa-author">익명</div><div class="qa-actions"><button class="up-btn ${item.voted?'voted':''}" onclick="upvote('${item.id}')">▲ ${item.votes}</button>${item.answered?'<span class="answered-tag">✓ 답변 완료</span>':`<button class="mark-answered-btn" onclick="markAnswered('${item.id}')">답변 완료</button>`}</div></div>`; list.appendChild(div); });
   updateCount('cnt-qa',qaItems.length); totalQuestions=qaItems.length; updateStats();
 }
 
@@ -2586,22 +2580,37 @@ async function launchQuizToParticipants() {
   }
 }
 
+let _hostTimerInterval = null;
+
 function renderQuizMonitor(qIdx) {
   currentMonitorQ = qIdx;
+  // 이전 타이머 정리
+  if (_hostTimerInterval) { clearInterval(_hostTimerInterval); _hostTimerInterval = null; }
   const body = document.getElementById('quizBody'); if (!body) return;
   const qs = hostQuizQuestions;
   if (!qs.length) return;
   const q = qs[qIdx];
   const answered = quizAnswerCounts[qIdx] || 0;
-  const timerLabel = quizTimerSec > 0 ? quizTimerSec + '초' : '무제한';
+
   body.innerHTML =
     '<div style="text-align:center;margin-bottom:16px;">' +
-    '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;">문제 ' + (qIdx+1) + ' / ' + qs.length + ' · 제한 ' + timerLabel + '</div>' +
-    '<div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:12px;">' + q.q + '</div>' +
-    '<div style="font-size:32px;font-weight:900;color:var(--theme-a);">' + answered + '명 답변 완료</div>' +
+    '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;">문제 ' + (qIdx+1) + ' / ' + qs.length + '</div>' +
+    '<div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:14px;">' + q.q + '</div>' +
+    // 타이머 표시
+    (quizTimerSec > 0 ?
+      '<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px;">' +
+      '<div id="hostTimerCircle" style="width:64px;height:64px;border-radius:50%;border:4px solid var(--theme-a);display:flex;align-items:center;justify-content:center;">' +
+      '<span id="hostTimerNum" style="font-size:24px;font-weight:900;color:var(--theme-a);">' + quizTimerSec + '</span></div>' +
+      '<div style="font-size:28px;font-weight:900;color:var(--text);">' + answered + '명 답변</div></div>' +
+      '<div style="height:8px;background:var(--off2);border-radius:100px;margin-bottom:16px;overflow:hidden;">' +
+      '<div id="hostTimerBar" style="height:100%;width:100%;background:var(--theme-a);border-radius:100px;transition:width 1s linear;"></div></div>'
+      :
+      '<div style="font-size:32px;font-weight:900;color:var(--theme-a);margin-bottom:16px;">' + answered + '명 답변 완료</div>'
+    ) +
     '</div>' +
     '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">' +
-    q.opts.map((o,i) => '<div style="padding:10px 14px;border-radius:10px;border:1.5px solid ' +
+    q.opts.map((o,i) =>
+      '<div style="padding:10px 14px;border-radius:10px;border:1.5px solid ' +
       (i===q.correct?'#22a05a':'var(--border)') + ';background:' +
       (i===q.correct?'#e6f7ee':'var(--off)') + ';font-size:13px;font-weight:600;display:flex;gap:10px;align-items:center;">' +
       '<span style="font-weight:800;color:var(--muted);">' + 'ABCD'[i] + '</span>' + o +
@@ -2612,6 +2621,27 @@ function renderQuizMonitor(qIdx) {
       '<button class="btn-launch" onclick="renderQuizMonitor(' + (qIdx+1) + ')">다음 문제 →</button>' :
       '<button class="btn-launch" onclick="showQuizResults()">🏆 결과 보기</button>') +
     '<button class="btn-outline" onclick="stopQuiz()">종료</button></div>';
+
+  // 실시간 카운트다운
+  if (quizTimerSec > 0) {
+    let remaining = quizTimerSec;
+    const startAt = Date.now();
+    _hostTimerInterval = setInterval(() => {
+      remaining = quizTimerSec - Math.floor((Date.now()-startAt)/1000);
+      if (remaining < 0) remaining = 0;
+      const numEl = document.getElementById('hostTimerNum');
+      const barEl = document.getElementById('hostTimerBar');
+      const circleEl = document.getElementById('hostTimerCircle');
+      if (numEl) numEl.textContent = remaining;
+      if (barEl) barEl.style.width = (remaining/quizTimerSec*100) + '%';
+      if (circleEl) {
+        const isLow = remaining <= 5;
+        circleEl.style.borderColor = isLow ? '#e05050' : 'var(--theme-a)';
+        if (numEl) numEl.style.color = isLow ? '#e05050' : 'var(--theme-a)';
+      }
+      if (remaining <= 0) { clearInterval(_hostTimerInterval); _hostTimerInterval = null; }
+    }, 1000);
+  }
 }
 
 async function showQuizResults() {
@@ -2652,6 +2682,7 @@ async function showQuizResults() {
 }
 
 function stopQuiz() {
+  if (_hostTimerInterval) { clearInterval(_hostTimerInterval); _hostTimerInterval = null; }
   if (db && roomCode) { db.ref(fbPath('quizAnswers')).off(); db.ref(fbPath('activeActivity')).set('quiz_edit'); }
   document.getElementById('quiz-edit-card').style.display = '';
   document.getElementById('quiz-live-card').style.display = 'none';
@@ -2812,7 +2843,7 @@ function renderPostitBoard() {
     const c=postitColors[i%postitColors.length];
     const rot=((i*7+3)%7-3)+'deg';
     return '<div class="postit-card" style="background:'+c.bg+';color:'+c.txt+';--rot:'+rot+';">'+
-      '<div>'+p.text+'</div><div class="postit-nick">— '+(p.nickname||'익명')+'</div></div>';
+      '<div>'+escapeHtml(p.text)+'</div><div class="postit-nick">— '+(p.nickname||'익명')+'</div></div>';
   }).join('');
   updateCount('cnt-postit',items.length);
 }
@@ -2820,26 +2851,83 @@ function renderPostitBoard() {
 // ============================================================
 //   BGM
 // ============================================================
-const bgmPresets = [
-  {label:'☕ 재즈 (Cafe Jazz)', url:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'},
-  {label:'⚡ 업비트 (Upbeat Pop)', url:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'},
-  {label:'🌆 시티팝 (City Pop)', url:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3'},
-  {label:'🎹 클래식 (Classical)', url:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3'},
-  {label:'🎸 어쿠스틱 팝 (Acoustic)', url:'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3'},
-];
+// 장르별 트랙 풀 (Pixabay 무료 음원)
+const bgmPool = {
+  jazz: {
+    label: '☕ 재즈', emoji: '☕',
+    tracks: [
+      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_270f4d1902.mp3',
+      'https://cdn.pixabay.com/download/audio/2022/08/02/audio_884fe92c21.mp3',
+      'https://cdn.pixabay.com/download/audio/2021/11/25/audio_5b6f29a523.mp3',
+    ]
+  },
+  upbeat: {
+    label: '⚡ 업비트', emoji: '⚡',
+    tracks: [
+      'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1bab.mp3',
+      'https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b4b6228.mp3',
+      'https://cdn.pixabay.com/download/audio/2023/03/09/audio_2a5e8b7f94.mp3',
+    ]
+  },
+  citypop: {
+    label: '🌆 시티팝', emoji: '🌆',
+    tracks: [
+      'https://cdn.pixabay.com/download/audio/2022/11/22/audio_febc508520.mp3',
+      'https://cdn.pixabay.com/download/audio/2023/01/26/audio_8b5c63d5e7.mp3',
+      'https://cdn.pixabay.com/download/audio/2022/08/23/audio_4a7898c4e2.mp3',
+    ]
+  },
+  classical: {
+    label: '🎹 클래식', emoji: '🎹',
+    tracks: [
+      'https://cdn.pixabay.com/download/audio/2022/01/27/audio_d0ef314a2c.mp3',
+      'https://cdn.pixabay.com/download/audio/2021/10/25/audio_2b3e21d8e8.mp3',
+      'https://cdn.pixabay.com/download/audio/2022/04/27/audio_1ecbf00791.mp3',
+    ]
+  },
+  acoustic: {
+    label: '🎸 어쿠스틱', emoji: '🎸',
+    tracks: [
+      'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3',
+      'https://cdn.pixabay.com/download/audio/2022/10/12/audio_347870d1e0.mp3',
+      'https://cdn.pixabay.com/download/audio/2023/02/08/audio_9b85cfb2fc.mp3',
+    ]
+  },
+};
+
+let bgmCurrentGenre = null;
 
 function initBGMPresets() {
-  const el=document.getElementById('bgmPresets'); if(!el||el.children.length) return;
-  el.innerHTML=bgmPresets.map((p,pi)=>
-    '<button onclick="selectBGMPreset('+pi+')" style="width:100%;text-align:left;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--off);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text);">'+
-    p.label+'</button>'
-  ).join('');
+  const el=document.getElementById('bgmPresets'); if(!el||el.dataset.init) return;
+  el.dataset.init='1';
+  renderBGMPresets();
 }
 
-function selectBGMPreset(idx) {
-  const url=bgmPresets[idx].url;
-  const input=document.getElementById('bgmUrl'); if(input) input.value=url;
+function renderBGMPresets() {
+  const el=document.getElementById('bgmPresets'); if(!el) return;
+  const keys = Object.keys(bgmPool);
+  el.innerHTML = keys.map((key,ki)=>{
+    const g=bgmPool[key];
+    const active=bgmCurrentGenre===key;
+    return '<button onclick="selectBGMGenre('+ki+')" ' +
+      'style="width:100%;text-align:left;padding:10px 14px;border-radius:10px;border:1.5px solid ' +
+      (active?'var(--theme-a)':'var(--border)') + ';background:' +
+      (active?'var(--theme-l)':'var(--off)') +
+      ';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text);display:flex;justify-content:space-between;align-items:center;">' +
+      '<span>'+g.label+'</span>' +
+      '<span style="font-size:11px;color:var(--muted);font-weight:600;">'+g.tracks.length+'곡 · 랜덤</span></button>';
+  }).join('');
+}
+
+function selectBGMGenre(idx) {
+  const key = Object.keys(bgmPool)[idx];
+  const genre = bgmPool[key]; if(!genre) return;
+  bgmCurrentGenre = key;
+  const randomTrack = genre.tracks[Math.floor(Math.random()*genre.tracks.length)];
+  const input=document.getElementById('bgmUrl'); if(input) input.value=randomTrack;
+  renderBGMPresets();
   playBGM();
+  document.getElementById('bgmStatus').textContent='▶ '+genre.label+' 재생 중 (랜덤 선택)';
 }
 
 function playBGM() {
