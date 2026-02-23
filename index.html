@@ -3982,10 +3982,16 @@ async function saveNewAdminPin() {
   if (!db) { if(err) err.textContent = 'Firebase 연결이 필요해요.'; return; }
   try {
     await db.ref(FIREBASE_PIN_PATH).set(newVal);
-    alert('✅ PIN이 저장됐어요!');
-    showAdminLogin();
-    const note = document.getElementById('adminFirstSetupNote');
-    if (note) note.style.display = 'none';
+    // 저장 성공 → 자동으로 인증 처리 후 바로 세션 진입
+    _adminVerified = true;
+    closeAdminPinOverlay();
+    if (_pendingHostArgs) {
+      const [c, act, title] = _pendingHostArgs;
+      _pendingHostArgs = null;
+      startAsHost(c, act, title);
+    } else {
+      alert('✅ PIN이 저장됐어요! 다음부터 이 PIN으로 로그인하세요.');
+    }
   } catch(e) {
     if(err) err.textContent = '저장 중 오류가 발생했어요.';
   }
