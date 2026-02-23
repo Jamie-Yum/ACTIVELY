@@ -1235,6 +1235,27 @@ body.ui-dark #screen-participant { background: var(--off); }
 
 
 
+
+/* ── 퀴즈 타이머 선택 버튼 ── */
+.quiz-timer-btn {
+  padding: 6px 16px; border-radius: 20px; border: 1.5px solid var(--border);
+  background: var(--off); font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: var(--font); color: var(--text); transition: all 0.15s;
+}
+.quiz-timer-btn.active {
+  background: var(--theme-a); color: #fff; border-color: var(--theme-a);
+}
+
+/* ── 포스트잇 카드 ── */
+.postit-card {
+  width: 160px; min-height: 140px; border-radius: 4px 4px 4px 16px;
+  padding: 14px 12px 10px; font-size: 13px; font-weight: 600; line-height: 1.5;
+  box-shadow: 3px 4px 12px rgba(0,0,0,0.13); position: relative;
+  word-break: break-word; display: flex; flex-direction: column; justify-content: space-between;
+  transform: rotate(var(--rot, 0deg)); transition: transform 0.2s;
+}
+.postit-card:hover { transform: rotate(0deg) scale(1.04); z-index: 2; }
+.postit-nick { font-size: 11px; font-weight: 800; opacity: 0.6; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -1307,6 +1328,7 @@ body.ui-dark #screen-participant { background: var(--off); }
       <button class="nav-tab" onclick="switchActivity('quiz',this)">🎯 퀴즈</button>
       <button class="nav-tab" onclick="switchActivity('rating',this)">⭐ 만족도</button>
       <button class="nav-tab" onclick="switchActivity('slider',this)">🎚️ 슬라이더</button>
+      <button class="nav-tab" onclick="switchActivity('postit',this)">📝 포스트잇</button>
     </div>
     <div class="nav-right">
       <div class="live-badge"><div class="live-dot-red"></div> LIVE</div>
@@ -1367,6 +1389,11 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="act-btn-icon">🎚️</div>
             <span>슬라이더 투표</span>
             <span class="act-count" id="cnt-slider">0</span>
+          </button>
+          <button class="act-btn" onclick="switchActivity('postit',this)">
+            <div class="act-btn-icon">📝</div>
+            <span>포스트잇</span>
+            <span class="act-count" id="cnt-postit">0</span>
           </button>
         </div>
       </div>
@@ -1488,12 +1515,22 @@ body.ui-dark #screen-participant { background: var(--off); }
 
       <!-- QUIZ -->
       <div class="activity-panel" id="ap-quiz">
+        <!-- 편집 카드 -->
         <div class="card" id="quiz-edit-card">
           <div class="card-header">
             <div class="card-header-icon">🎯</div>
-            <div class="card-title">퀴즈 문제 편집</div>
+            <div class="card-title">퀴즈 설정</div>
           </div>
           <div class="card-body">
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">⏱ 문제당 제한 시간</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="quiz-timer-btn active" data-sec="10" onclick="setQuizTimer(10,this)">10초</button>
+                <button class="quiz-timer-btn" data-sec="20" onclick="setQuizTimer(20,this)">20초</button>
+                <button class="quiz-timer-btn" data-sec="30" onclick="setQuizTimer(30,this)">30초</button>
+                <button class="quiz-timer-btn" data-sec="0" onclick="setQuizTimer(0,this)">무제한</button>
+              </div>
+            </div>
             <div id="quizEditList"></div>
             <button class="btn-add-opt" onclick="addQuizQuestion()" style="margin-top:8px;">+ 문제 추가</button>
             <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -1502,6 +1539,7 @@ body.ui-dark #screen-participant { background: var(--off); }
             </div>
           </div>
         </div>
+        <!-- 진행 모니터 카드 (발표자용) -->
         <div class="card" id="quiz-live-card" style="display:none">
           <div class="card-header">
             <div class="card-header-icon">🎯</div>
@@ -1509,6 +1547,35 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="live-badge"><div class="live-dot-red"></div> LIVE</div>
           </div>
           <div class="card-body" id="quizBody"></div>
+        </div>
+        <!-- 결과 카드 -->
+        <div class="card" id="quiz-result-card" style="display:none">
+          <div class="card-header">
+            <div class="card-header-icon">🏆</div>
+            <div class="card-title">퀴즈 결과</div>
+          </div>
+          <div class="card-body" id="quizResultBody"></div>
+        </div>
+      </div>
+
+      <!-- POSTIT -->
+      <div class="activity-panel" id="ap-postit">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">📝</div>
+            <div class="card-title">포스트잇</div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">질문 / 안내문</label>
+              <input type="text" class="form-input" id="postitQ" value="이번 세션에서 느낀 점이나 아이디어를 자유롭게 적어주세요!">
+            </div>
+            <div class="action-row">
+              <button class="btn-launch" onclick="broadcastPostitQ()">📢 질문 전송</button>
+              <button class="btn-outline" onclick="clearPostits()">🗑 전체 삭제</button>
+            </div>
+            <div id="postitBoard" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;min-height:120px;"></div>
+          </div>
         </div>
       </div>
 
@@ -1700,6 +1767,7 @@ body.ui-dark #screen-participant { background: var(--off); }
     <div style="display:flex;align-items:center;gap:8px;">
       <div id="pNicknameBadge" style="display:none;font-size:12px;font-weight:700;color:var(--theme-a);background:var(--theme-l);padding:4px 12px;border-radius:100px;"></div>
       <div class="live-badge"><div class="live-dot-red"></div> 연결됨</div>
+      <div id="pSessionNickname" style="font-size:12px;font-weight:800;color:var(--muted);margin-left:4px;"></div>
     </div>
   </div>
 
@@ -1915,6 +1983,9 @@ async function initHostSession(c, initialAct) {
       ratings=s.val()||[]; if(document.getElementById('ap-rating')?.classList.contains('active')){ updateRatingResult(); updateCount('cnt-rating',ratings.length); }
     });
 
+    fbOn('postits','value', s=>{
+      postitData=s.val()||{}; if(document.getElementById('ap-postit')?.classList.contains('active')){ renderPostitBoard(); updateCount('cnt-postit',Object.keys(postitData).length); }
+    });
     fbOn('slider','value', s=>{
       sliderResponses=s.val()||[]; if(document.getElementById('ap-slider')?.classList.contains('active')){ renderSliderResults(); updateCount('cnt-slider',sliderResponses.length); }
     });
@@ -1934,137 +2005,190 @@ let pLastQuizTs = null;
 let pCurrentQuizQuestions = [];
 let pQuizScore = 0;
 let pQuizAnswered = false;
+let pQuizStartTime = 0;
 
 async function joinSessionFirebase(code) {
   if (!db) return false;
   try {
     const snap = await db.ref(`sessions/${code}`).once('value');
-    if (!snap.exists()||!snap.val().active) return false;
-    roomCode=code; ctx=snap.val().ctx||'edu'; isHost=false;
-    setParticipantSessionTitle(snap.val().title||'');
+    if (!snap.exists() || !snap.val().active) return false;
+    roomCode = code; ctx = snap.val().ctx || 'edu'; isHost = false;
+    setParticipantSessionTitle(snap.val().title || '');
     setTheme(ctx);
-    db.ref(`sessions/${code}/title`).on('value', s=>setParticipantSessionTitle(s.val()||''));
-    await db.ref(`sessions/${code}/participants`).transaction(n=>(n||0)+1);
+    db.ref(`sessions/${code}/title`).on('value', s => setParticipantSessionTitle(s.val() || ''));
+    await db.ref(`sessions/${code}/participants`).transaction(n => (n || 0) + 1);
 
     // 발표자 탭 전환 → 참여자 화면 즉시 전환
-    db.ref(`sessions/${code}/activeActivity`).on('value', s=>{
-      const act = s.val(); if(!act) return;
-      if(act==='poll'){
-        // 투표 live 여부는 poll 리스너가 처리, 여기선 대기 화면만
-        db.ref(`sessions/${code}/poll`).once('value').then(ps=>{
-          const d=ps.val();
-          const pTitle=document.getElementById('pTitle');
-          const pContent=document.getElementById('pContent');
-          if(!pTitle||!pContent) return;
-          if(!d||!d.live){
-            pTitle.textContent='실시간 투표';
-            pContent.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 투표를 시작하면 여기에 표시됩니다.</div>';
+    db.ref(`sessions/${code}/activeActivity`).on('value', s => {
+      const act = s.val(); if (!act) return;
+      if (act === 'poll') {
+        db.ref(`sessions/${code}/poll`).once('value').then(ps => {
+          const d = ps.val();
+          const pTitle = document.getElementById('pTitle');
+          const pContent = document.getElementById('pContent');
+          if (!pTitle || !pContent) return;
+          if (!d || !d.live) {
+            pTitle.textContent = '실시간 투표';
+            pContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 투표를 시작하면 여기에 표시됩니다.</div>';
           }
         });
-      } else if(act==='quiz'||act==='quiz_edit'){
-        const pTitle=document.getElementById('pTitle');
-        const pContent=document.getElementById('pContent');
-        if(!pTitle||!pContent) return;
-        pTitle.textContent='퀴즈';
-        pContent.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 퀴즈를 시작하면 여기에 표시됩니다.</div>';
+      } else if (act === 'quiz' || act === 'quiz_edit') {
+        const pTitle = document.getElementById('pTitle');
+        const pContent = document.getElementById('pContent');
+        if (!pTitle || !pContent) return;
+        pTitle.textContent = '퀴즈';
+        pContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 퀴즈를 시작하면 여기에 표시됩니다.</div>';
+      } else if (act === 'postit') {
+        db.ref(`sessions/${code}/postitQ`).once('value').then(ps => {
+          const q = ps.val() || '이번 세션에서 느낀 점을 자유롭게 적어주세요!';
+          const pTitle = document.getElementById('pTitle');
+          const pContent = document.getElementById('pContent');
+          if (!pTitle || !pContent) return;
+          pTitle.textContent = '📝 포스트잇';
+          pContent.innerHTML =
+            '<div style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text);">' + q + '</div>' +
+            '<textarea id="pPostitInput" style="width:100%;min-height:100px;padding:12px;border-radius:12px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;resize:vertical;" placeholder="내용을 자유롭게 입력하세요..."></textarea>' +
+            '<button onclick="submitParticipantPostit(\'' + code + '\')" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:none;background:var(--theme-g);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">📌 붙이기</button>';
+        });
       } else {
-        pVoted=false;
+        pVoted = false;
         updateParticipantView(act);
       }
     });
 
     // 투표 실시간 리스너
-    db.ref(`sessions/${code}/poll`).on('value', s=>{
-      const d=s.val(); if(!d) return;
-      const pTitle=document.getElementById('pTitle');
-      const pContent=document.getElementById('pContent');
-      if(!pTitle||!pContent) return;
-      if(d.live){
-        if(pVoted){
-          const votes=d.votes||{};
-          const total=Object.values(votes).reduce((a,b)=>a+b,0)||1;
-          pTitle.textContent=d.q||'투표';
-          pContent.innerHTML=(d.opts||[]).map((o,i)=>{
-            const v=votes[i]||0; const pct=Math.round(v/total*100);
-            return '<div style="margin-bottom:12px;">'+
-              '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px;">'+
-              '<span>'+o+'</span><span style="color:var(--theme-a);font-weight:700;">'+pct+'%</span></div>'+
-              '<div style="height:10px;background:var(--off2);border-radius:100px;overflow:hidden;">'+
-              '<div style="width:'+pct+'%;height:100%;background:var(--theme-g);border-radius:100px;transition:width 0.6s ease;"></div></div>'+
-              '<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+v+'표</div></div>';
-          }).join('')+'<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:10px;padding:10px;background:var(--off);border-radius:10px;">✅ 투표 완료 · 총 '+total+'표 집계 중</div>';
+    db.ref(`sessions/${code}/poll`).on('value', s => {
+      const d = s.val(); if (!d) return;
+      const pTitle = document.getElementById('pTitle');
+      const pContent = document.getElementById('pContent');
+      if (!pTitle || !pContent) return;
+      if (d.live) {
+        if (pVoted) {
+          const votes = d.votes || {};
+          const total = Object.values(votes).reduce((a, b) => a + b, 0) || 1;
+          pTitle.textContent = d.q || '투표';
+          pContent.innerHTML = (d.opts || []).map((o, i) => {
+            const v = votes[i] || 0; const pct = Math.round(v / total * 100);
+            return '<div style="margin-bottom:12px;">' +
+              '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px;">' +
+              '<span>' + o + '</span><span style="color:var(--theme-a);font-weight:700;">' + pct + '%</span></div>' +
+              '<div style="height:10px;background:var(--off2);border-radius:100px;overflow:hidden;">' +
+              '<div style="width:' + pct + '%;height:100%;background:var(--theme-g);border-radius:100px;transition:width 0.6s ease;"></div></div>' +
+              '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + v + '표</div></div>';
+          }).join('') + '<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:10px;padding:10px;background:var(--off);border-radius:10px;">✅ 투표 완료 · 총 ' + total + '표 집계 중</div>';
         } else {
-          pTitle.textContent=d.q||'투표';
-          pContent.innerHTML=(d.opts||[]).map((o,i)=>
-            '<button class="v-btn" style="width:100%;margin-bottom:10px;padding:15px;font-size:14px;font-weight:700;text-align:left;border-radius:12px;" '+
-            'onclick="participantVote(\''+code+'\','+i+',this)">'+o+'</button>'
-          ).join('')+'<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:6px;">하나를 선택하면 자동으로 제출됩니다</div>';
+          pTitle.textContent = d.q || '투표';
+          pContent.innerHTML = (d.opts || []).map((o, i) =>
+            '<button class="v-btn" style="width:100%;margin-bottom:10px;padding:15px;font-size:14px;font-weight:700;text-align:left;border-radius:12px;" ' +
+            'onclick="participantVote(\'' + code + '\',' + i + ',this)">' + o + '</button>'
+          ).join('') + '<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:6px;">하나를 선택하면 자동으로 제출됩니다</div>';
         }
-      } else { pVoted=false; }
+      } else { pVoted = false; }
     });
 
     // 퀴즈 실시간 리스너
-    db.ref(`sessions/${code}/quiz`).on('value', s=>{
-      const d=s.val();
-      if(d&&d.started&&Array.isArray(d.questions)&&d.questions.length>0){
-        if(d.ts!==pLastQuizTs){
-          pLastQuizTs=d.ts; pQuizScore=0; pQuizAnswered=false;
-          pCurrentQuizQuestions=d.questions;
-          renderParticipantQuiz(code,d.questions,0);
+    db.ref(`sessions/${code}/quiz`).on('value', s => {
+      const d = s.val();
+      if (d && d.started && Array.isArray(d.questions) && d.questions.length > 0) {
+        if (d.ts !== pLastQuizTs) {
+          pLastQuizTs = d.ts;
+          pQuizScore = 0; pQuizAnswered = false;
+          pCurrentQuizQuestions = d.questions;
+          pQuizTimerSec = d.timerSec !== undefined ? d.timerSec : 20;
+          renderParticipantQuiz(code, d.questions, 0);
         }
       }
     });
 
+    // 포스트잇 질문 실시간 동기화
+    db.ref(`sessions/${code}/postitQ`).on('value', s => {
+      const q = s.val();
+      const pTitle = document.getElementById('pTitle');
+      if (q && pTitle && pTitle.textContent === '📝 포스트잇') {
+        document.querySelector('#pContent div')&&(document.querySelector('#pContent div').textContent = q);
+      }
+    });
+
     return true;
-  } catch(e){ console.error(e); return false; }
+  } catch (e) { console.error(e); return false; }
 }
 
-async function participantVote(code,optIdx,btnEl) {
-  if(!db||pVoted) return;
-  pVoted=true;
-  document.querySelectorAll('#pContent .v-btn').forEach(b=>{b.disabled=true;b.style.opacity='0.4';});
-  if(btnEl&&btnEl.style){btnEl.style.opacity='1';btnEl.style.borderColor='var(--theme-a)';btnEl.style.background='var(--theme-l)';}
-  await db.ref(`sessions/${code}/poll/votes/${optIdx}`).transaction(n=>(n||0)+1);
-  await db.ref(`sessions/${code}/responses`).transaction(n=>(n||0)+1);
+async function participantVote(code, optIdx, btnEl) {
+  if (!db || pVoted) return;
+  pVoted = true;
+  document.querySelectorAll('#pContent .v-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
+  if (btnEl && btnEl.style) { btnEl.style.opacity = '1'; btnEl.style.borderColor = 'var(--theme-a)'; btnEl.style.background = 'var(--theme-l)'; }
+  await db.ref(`sessions/${code}/poll/votes/${optIdx}`).transaction(n => (n || 0) + 1);
+  await db.ref(`sessions/${code}/responses`).transaction(n => (n || 0) + 1);
 }
 
-function renderParticipantQuiz(code,questions,qIdx){
-  const pTitle=document.getElementById('pTitle');
-  const pContent=document.getElementById('pContent');
-  if(!pTitle||!pContent) return;
-  pCurrentQuizQuestions=questions;
-  if(qIdx>=questions.length){
-    const pct=Math.round(pQuizScore/questions.length*100);
-    pTitle.textContent='퀴즈 완료!';
-    pContent.innerHTML='<div style="text-align:center;padding:24px 0;">'+
-      '<div style="font-size:56px;margin-bottom:10px;">'+(pct>=80?'🏆':pct>=60?'👍':'💪')+'</div>'+
-      '<div style="font-size:24px;font-weight:900;color:var(--theme-a);margin-bottom:6px;">'+pQuizScore+' / '+questions.length+' 정답</div>'+
-      '<div style="font-size:15px;color:var(--muted);">정답률 '+pct+'%</div></div>';
+async function submitParticipantPostit(code) {
+  const input = document.getElementById('pPostitInput');
+  const text = input ? input.value.trim() : '';
+  if (!text) return;
+  await db.ref(`sessions/${code}/postits`).push({
+    text, nickname: participantNickname || '익명', ts: Date.now()
+  });
+  input.value = '';
+  showSubmitSuccess('포스트잇이 붙었어요! 📌');
+}
+
+let pQuizTimerSec = 20;
+
+function renderParticipantQuiz(code, questions, qIdx) {
+  const pTitle = document.getElementById('pTitle');
+  const pContent = document.getElementById('pContent');
+  if (!pTitle || !pContent) return;
+  pCurrentQuizQuestions = questions;
+  if (qIdx >= questions.length) {
+    const pct = Math.round(pQuizScore / questions.length * 100);
+    pTitle.textContent = '퀴즈 완료!';
+    pContent.innerHTML = '<div style="text-align:center;padding:24px 0;">' +
+      '<div style="font-size:56px;margin-bottom:10px;">' + (pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '💪') + '</div>' +
+      '<div style="font-size:24px;font-weight:900;color:var(--theme-a);margin-bottom:6px;">' + pQuizScore + ' / ' + questions.length + ' 정답</div>' +
+      '<div style="font-size:15px;color:var(--muted);">정답률 ' + pct + '%</div></div>';
     return;
   }
-  const q=questions[qIdx]; pQuizAnswered=false;
-  pTitle.textContent='Q'+(qIdx+1)+' / '+questions.length;
-  pContent.innerHTML='<div style="font-size:16px;font-weight:800;margin-bottom:16px;line-height:1.5;color:var(--text);">'+q.q+'</div>'+
-    q.opts.map((o,i)=>
-      '<button id="pqo'+i+'" onclick="answerParticipantQuiz('+i+','+q.correct+',\''+code+'\','+qIdx+')" '+
-      'style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-size:14px;font-weight:600;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;">'+
-      '<span style="width:28px;height:28px;border-radius:7px;background:var(--off2);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">'+'ABCD'[i]+'</span>'+o+'</button>'
+  const q = questions[qIdx]; pQuizAnswered = false; pQuizStartTime = Date.now();
+  pTitle.textContent = 'Q' + (qIdx + 1) + ' / ' + questions.length;
+  let timerHtml = '';
+  if (pQuizTimerSec > 0) {
+    timerHtml = '<div style="height:6px;background:var(--off2);border-radius:100px;margin-bottom:14px;overflow:hidden;">' +
+      '<div id="pTimerBar" style="height:100%;background:var(--theme-a);border-radius:100px;width:100%;transition:width ' + pQuizTimerSec + 's linear;"></div></div>';
+  }
+  pContent.innerHTML = timerHtml +
+    '<div style="font-size:16px;font-weight:800;margin-bottom:16px;line-height:1.5;color:var(--text);">' + q.q + '</div>' +
+    q.opts.map((o, i) =>
+      '<button id="pqo' + i + '" onclick="answerParticipantQuiz(' + i + ',' + q.correct + ',\'' + code + '\',' + qIdx + ')" ' +
+      'style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-size:14px;font-weight:600;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;">' +
+      '<span style="width:28px;height:28px;border-radius:7px;background:var(--off2);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">' + 'ABCD'[i] + '</span>' + o + '</button>'
     ).join('');
+  if (pQuizTimerSec > 0) {
+    setTimeout(() => { const bar = document.getElementById('pTimerBar'); if (bar) bar.style.width = '0%'; }, 50);
+    setTimeout(() => {
+      if (!pQuizAnswered) answerParticipantQuiz(-1, q.correct, code, qIdx);
+    }, pQuizTimerSec * 1000);
+  }
 }
 
-function answerParticipantQuiz(chosen,correct,code,qIdx){
-  if(pQuizAnswered) return; pQuizAnswered=true;
-  document.querySelectorAll('#pContent button').forEach(b=>{b.style.pointerEvents='none';b.style.cursor='default';});
-  const cb=document.getElementById('pqo'+chosen);
-  const rb=document.getElementById('pqo'+correct);
-  if(chosen===correct){
-    pQuizScore++;
-    if(cb){cb.style.borderColor='#22a05a';cb.style.background='#e6f7ee';cb.style.color='#1a6b3a';}
-  } else {
-    if(cb){cb.style.borderColor='#e05050';cb.style.background='#fdeaea';cb.style.color='#b03030';}
-    if(rb){rb.style.borderColor='#22a05a';rb.style.background='#e6f7ee';rb.style.color='#1a6b3a';}
+async function answerParticipantQuiz(chosen, correct, code, qIdx) {
+  if (pQuizAnswered) return; pQuizAnswered = true;
+  const elapsed = Date.now() - pQuizStartTime;
+  document.querySelectorAll('#pContent button').forEach(b => { b.style.pointerEvents = 'none'; b.style.cursor = 'default'; });
+  const isCorrect = chosen === correct;
+  if (isCorrect) pQuizScore++;
+  const cb = document.getElementById('pqo' + chosen);
+  const rb = document.getElementById('pqo' + correct);
+  if (cb && chosen >= 0) { cb.style.borderColor = isCorrect ? '#22a05a' : '#e05050'; cb.style.background = isCorrect ? '#e6f7ee' : '#fdeaea'; cb.style.color = isCorrect ? '#1a6b3a' : '#b03030'; }
+  if (rb && !isCorrect) { rb.style.borderColor = '#22a05a'; rb.style.background = '#e6f7ee'; rb.style.color = '#1a6b3a'; }
+  // Firebase에 답변 기록 (결과표용)
+  if (db && code) {
+    const clientId = window._clientId || (window._clientId = 'u' + Date.now() + Math.random().toString(36).slice(2, 6));
+    await db.ref(`sessions/${code}/quizAnswers/${clientId}`).set({
+      nickname: participantNickname || '익명', qIdx, correct: isCorrect, time: elapsed, ts: Date.now()
+    });
   }
-  setTimeout(()=>renderParticipantQuiz(code,pCurrentQuizQuestions,qIdx+1),2200);
+  setTimeout(() => renderParticipantQuiz(code, pCurrentQuizQuestions, qIdx + 1), 2200);
 }
 
 // ============================================================
@@ -2211,14 +2335,7 @@ function switchActivity(act,btn) {
   if(actBtns[idx]) actBtns[idx].classList.add('active');
   const navTabs=document.querySelectorAll('.nav-tabs .nav-tab');
   if(navTabs[idx]) navTabs[idx].classList.add('active');
-  if(isHost&&db&&roomCode){
-    if(act==='quiz'){
-      const liveCard=document.getElementById('quiz-live-card');
-      db.ref(fbPath('activeActivity')).set(liveCard&&liveCard.style.display!=='none'?'quiz':'quiz_edit');
-    } else {
-      db.ref(fbPath('activeActivity')).set(act);
-    }
-  }
+  if(isHost&&db&&roomCode) db.ref(fbPath('activeActivity')).set(act);
 }
 
 // ============================================================
@@ -2232,9 +2349,8 @@ async function launchPoll() {
   const opts=Array.from(document.querySelectorAll('#pollOpts input')).map(i=>i.value.trim()).filter(Boolean);
   if(!q||opts.length<2) return;
   pollData={q,opts,votes:opts.map(()=>0)}; pollLive=true;
-  await fbSet('poll',{live:true,q,opts,votes:opts.reduce((acc,_,i)=>({...acc,[i]:0}),{})});
-  if(db&&roomCode) await db.ref(fbPath('activeActivity')).set('poll');
-  addFeed(`🔥 투표 시작! 참여자에게 전송됨: "${q}"`,'var(--theme-a)');
+  const ok=await fbSet('poll',{live:true,q,opts,votes:opts.reduce((acc,_,i)=>({...acc,[i]:0}),{})});
+  addFeed(ok?`🔥 투표 Firebase 게시됨: "${q}"`:`투표 시작: "${q}"`,'var(--theme-a)');
   document.getElementById('poll-edit-card').style.display='none';
   document.getElementById('poll-result-card').style.display='';
   document.getElementById('pr-question').textContent=q;
@@ -2339,101 +2455,248 @@ function filterQA(f) {
   renderQA();
 }
 
+
 // ============================================================
-//   QUIZ — 호스트 편집 + Firebase 참여자 전송
+//   POSTIT
+// ============================================================
+const postitColors = [
+  {bg:'#fff9c4',txt:'#7a6000'},{bg:'#c8f7c5',txt:'#1a5c2a'},
+  {bg:'#d6eaff',txt:'#0a3d8c'},{bg:'#ffd6e0',txt:'#8c1a3a'},
+  {bg:'#e8d5ff',txt:'#4a1a8c'},{bg:'#ffe0cc',txt:'#8c3a00'},
+];
+let postitData = {};
+
+function broadcastPostitQ() {
+  const q = document.getElementById('postitQ')?.value.trim();
+  if (!q) return;
+  if (db && roomCode) db.ref(fbPath('postitQ')).set(q);
+  if (db && roomCode) db.ref(fbPath('activeActivity')).set('postit');
+  addFeed('📝 포스트잇 질문 전송됨', 'var(--theme-a)');
+}
+
+async function clearPostits() {
+  if (!confirm('모든 포스트잇을 삭제할까요?')) return;
+  if (db && roomCode) await db.ref(fbPath('postits')).remove();
+  postitData = {};
+  renderPostitBoard();
+}
+
+function renderPostitBoard() {
+  const board = document.getElementById('postitBoard'); if (!board) return;
+  const items = Object.values(postitData);
+  if (!items.length) {
+    board.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center;">아직 포스트잇이 없어요. 참여자들의 응답을 기다리는 중...</div>';
+    return;
+  }
+  board.innerHTML = items.map((p, i) => {
+    const c = postitColors[i % postitColors.length];
+    const rot = ((i * 7 + 3) % 7 - 3) + 'deg';
+    return '<div class="postit-card" style="background:' + c.bg + ';color:' + c.txt + ';--rot:' + rot + ';">' +
+      '<div>' + p.text + '</div>' +
+      '<div class="postit-nick">— ' + (p.nickname || '익명') + '</div></div>';
+  }).join('');
+  updateCount('cnt-postit', items.length);
+}
+
+// ============================================================
+//   QUIZ — 발표자 모니터 + 참여자 전송 + 결과표
 // ============================================================
 let hostQuizQuestions = [];
+let quizTimerSec = 20; // 기본 20초
+let quizAnswerCounts = {}; // {qIdx: count}
 
-function loadDefaultQuiz(){
-  hostQuizQuestions=JSON.parse(JSON.stringify(quizzes[ctx]||quizzes.edu));
+function setQuizTimer(sec, btn) {
+  quizTimerSec = sec;
+  document.querySelectorAll('.quiz-timer-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function loadDefaultQuiz() {
+  hostQuizQuestions = JSON.parse(JSON.stringify(quizzes[ctx] || quizzes.edu));
   renderQuizEditList();
 }
 
-function renderQuizEditList(){
-  const el=document.getElementById('quizEditList'); if(!el) return;
-  if(!hostQuizQuestions.length){
-    el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">기본 문제를 불러오거나 직접 추가하세요.</div>';
+function renderQuizEditList() {
+  const el = document.getElementById('quizEditList'); if (!el) return;
+  if (!hostQuizQuestions.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0;">기본 문제를 불러오거나 직접 추가하세요.</div>';
     return;
   }
-  el.innerHTML=hostQuizQuestions.map((q,qi)=>
-    '<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--off);">'+
-    '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">'+
-    '<span style="font-size:12px;font-weight:700;color:var(--muted);">Q'+(qi+1)+'</span>'+
-    '<input type="text" class="form-input" value="'+q.q.replace(/"/g,'&quot;')+'" style="flex:1;" onchange="hostQuizQuestions['+qi+'].q=this.value">'+
-    '<button onclick="removeQuizQuestion('+qi+')" style="border:1px solid var(--border2);background:transparent;border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;">✕</button></div>'+
-    '<div style="display:flex;flex-direction:column;gap:6px;">'+
-    q.opts.map((o,oi)=>
-      '<div style="display:flex;gap:6px;align-items:center;">'+
-      '<input type="radio" name="correct_'+qi+'" value="'+oi+'" '+(q.correct===oi?'checked':'')+' onchange="hostQuizQuestions['+qi+'].correct='+oi+'" style="accent-color:var(--theme-a);flex-shrink:0;">'+
-      '<input type="text" class="form-input" value="'+o.replace(/"/g,'&quot;')+'" style="flex:1;font-size:13px;" onchange="hostQuizQuestions['+qi+'].opts['+oi+']=this.value"></div>'
-    ).join('')+
-    '</div><div style="font-size:11px;color:var(--muted);margin-top:8px;">라디오 버튼으로 정답 선택</div></div>'
+  el.innerHTML = hostQuizQuestions.map((q, qi) =>
+    '<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--off);">' +
+    '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">' +
+    '<span style="font-size:12px;font-weight:700;color:var(--muted);">Q' + (qi + 1) + '</span>' +
+    '<input type="text" class="form-input" value="' + q.q.replace(/"/g, '&quot;') + '" style="flex:1;" onchange="hostQuizQuestions[' + qi + '].q=this.value">' +
+    '<button onclick="removeQuizQuestion(' + qi + ')" style="border:1px solid var(--border2);background:transparent;border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;">✕</button></div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;">' +
+    q.opts.map((o, oi) =>
+      '<div style="display:flex;gap:6px;align-items:center;">' +
+      '<input type="radio" name="correct_' + qi + '" value="' + oi + '" ' + (q.correct === oi ? 'checked' : '') + ' onchange="hostQuizQuestions[' + qi + '].correct=' + oi + '" style="accent-color:var(--theme-a);flex-shrink:0;">' +
+      '<input type="text" class="form-input" value="' + o.replace(/"/g, '&quot;') + '" style="flex:1;font-size:13px;" onchange="hostQuizQuestions[' + qi + '].opts[' + oi + ']=this.value"></div>'
+    ).join('') +
+    '</div><div style="font-size:11px;color:var(--muted);margin-top:8px;">라디오로 정답 선택</div></div>'
   ).join('');
 }
 
-function addQuizQuestion(){
-  hostQuizQuestions.push({q:'새 문제를 입력하세요',opts:['보기 A','보기 B','보기 C','보기 D'],correct:0});
+function addQuizQuestion() {
+  hostQuizQuestions.push({ q: '새 문제를 입력하세요', opts: ['보기 A', '보기 B', '보기 C', '보기 D'], correct: 0 });
   renderQuizEditList();
 }
-function removeQuizQuestion(idx){hostQuizQuestions.splice(idx,1);renderQuizEditList();}
+function removeQuizQuestion(idx) { hostQuizQuestions.splice(idx, 1); renderQuizEditList(); }
 
-async function launchQuizToParticipants(){
-  if(!hostQuizQuestions.length){alert('문제를 먼저 추가해 주세요.');return;}
-  if(FIREBASE_READY&&db&&roomCode){
-    await db.ref(fbPath('quiz')).set({questions:hostQuizQuestions,started:true,currentQ:0,ts:Date.now()});
+async function launchQuizToParticipants() {
+  if (!hostQuizQuestions.length) { alert('문제를 먼저 추가해 주세요.'); return; }
+  quizAnswerCounts = {};
+  if (FIREBASE_READY && db && roomCode) {
+    await db.ref(fbPath('quiz')).set({
+      questions: hostQuizQuestions, started: true, currentQ: 0,
+      timerSec: quizTimerSec, ts: Date.now()
+    });
+    await db.ref(fbPath('quizAnswers')).remove();
     await db.ref(fbPath('activeActivity')).set('quiz');
   }
-  document.getElementById('quiz-edit-card').style.display='none';
-  document.getElementById('quiz-live-card').style.display='';
-  quizIdx=0;quizScore=0;quizAnswered=false;
-  renderQuiz();
-  addFeed('퀴즈 시작! 참여자에게 전송됨','var(--theme-a)');
+  document.getElementById('quiz-edit-card').style.display = 'none';
+  document.getElementById('quiz-live-card').style.display = '';
+  document.getElementById('quiz-result-card').style.display = 'none';
+  renderQuizMonitor(0);
+  addFeed('퀴즈 시작! 참여자에게 전송됨', 'var(--theme-a)');
+  // 실시간 답변 수 모니터링
+  if (db && roomCode) {
+    db.ref(fbPath('quizAnswers')).on('value', s => {
+      const data = s.val() || {};
+      quizAnswerCounts = {};
+      Object.values(data).forEach(r => {
+        if (r.qIdx !== undefined) quizAnswerCounts[r.qIdx] = (quizAnswerCounts[r.qIdx] || 0) + 1;
+      });
+      renderQuizMonitor(currentMonitorQ);
+    });
+  }
 }
 
-function stopQuiz(){
-  document.getElementById('quiz-edit-card').style.display='';
-  document.getElementById('quiz-live-card').style.display='none';
-  if(db&&roomCode) db.ref(fbPath('activeActivity')).set('quiz_edit');
-}
+let currentMonitorQ = 0;
 
-function renderQuiz(){
-  const body=document.getElementById('quizBody'); if(!body) return;
-  const qs=hostQuizQuestions.length?hostQuizQuestions:(quizzes[ctx]||quizzes.edu);
-  if(quizIdx>=qs.length){
-    const pct=Math.round(quizScore/qs.length*100);
-    body.innerHTML='<div class="quiz-result"><div class="quiz-result-score" style="color:var(--theme-a)">'+quizScore+'/'+qs.length+'</div>'+
-      '<div class="quiz-result-label">'+(pct>=80?'🏆 훌륭합니다!':pct>=60?'👍 잘 하셨어요!':'💪 다시 도전!')+'</div>'+
-      '<div style="font-size:14px;color:var(--muted);margin-bottom:24px">정답률 '+pct+'%</div>'+
-      '<div style="display:flex;gap:10px;justify-content:center;">'+
-      '<button class="btn-launch" onclick="restartQuiz()">처음부터 다시</button>'+
-      '<button class="btn-outline" onclick="stopQuiz()">✏️ 문제 편집</button></div></div>';
+function renderQuizMonitor(qIdx) {
+  currentMonitorQ = qIdx;
+  const body = document.getElementById('quizBody'); if (!body) return;
+  const qs = hostQuizQuestions;
+  if (!qs.length) return;
+  if (qIdx >= qs.length) {
+    // 모든 문제 끝 → 결과표
+    showQuizResults();
     return;
   }
-  const q=qs[quizIdx]; quizAnswered=false;
-  body.innerHTML='<div class="quiz-header"><div class="quiz-progress">문제 '+(quizIdx+1)+' / '+qs.length+'</div><div class="quiz-score-badge">점수 '+quizScore+'점</div></div>'+
-    '<div class="timer-track"><div class="timer-bar" id="timerBar" style="width:100%"></div></div>'+
-    '<div class="quiz-q">'+q.q+'</div>'+
-    '<div class="quiz-opts">'+q.opts.map((o,i)=>'<div class="q-opt" id="qo'+i+'" onclick="answerQuiz('+i+')"><div class="q-opt-key">'+'ABCD'[i]+'</div>'+o+'</div>').join('')+'</div>';
-  updateCount('cnt-quiz',quizIdx+1);
-  const bar=document.getElementById('timerBar');
-  if(bar){
-    bar.style.transition='width 20s linear';
-    setTimeout(()=>bar.style.width='0%',50);
-    setTimeout(()=>{if(!quizAnswered){document.querySelectorAll('.q-opt').forEach(b=>b.style.pointerEvents='none');const c=document.getElementById('qo'+q.correct);if(c)c.classList.add('correct');quizAnswered=true;setTimeout(()=>{quizIdx++;renderQuiz();},2000);}},20000);
+  const q = qs[qIdx];
+  const answered = quizAnswerCounts[qIdx] || 0;
+  body.innerHTML =
+    '<div style="text-align:center;margin-bottom:16px;">' +
+    '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;">문제 ' + (qIdx + 1) + ' / ' + qs.length + '</div>' +
+    '<div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:12px;">' + q.q + '</div>' +
+    '<div style="font-size:28px;font-weight:900;color:var(--theme-a);">' + answered + '명 답변 완료</div>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">' +
+    q.opts.map((o, i) => '<div style="padding:10px 14px;border-radius:10px;border:1.5px solid ' +
+      (i === q.correct ? '#22a05a' : 'var(--border)') + ';background:' +
+      (i === q.correct ? '#e6f7ee' : 'var(--off)') + ';font-size:13px;font-weight:600;display:flex;gap:10px;align-items:center;">' +
+      '<span style="font-weight:800;color:var(--muted);">' + 'ABCD'[i] + '</span>' + o +
+      (i === q.correct ? '<span style="margin-left:auto;color:#22a05a;font-size:12px;">✓ 정답</span>' : '') + '</div>'
+    ).join('') + '</div>' +
+    '<div style="display:flex;gap:8px;justify-content:center;">' +
+    (qIdx < qs.length - 1 ?
+      '<button class="btn-launch" onclick="renderQuizMonitor(' + (qIdx + 1) + ')">다음 문제 →</button>' :
+      '<button class="btn-launch" onclick="showQuizResults()">🏆 결과 보기</button>') +
+    '<button class="btn-outline" onclick="stopQuiz()">✏️ 종료</button></div>';
+}
+
+async function showQuizResults() {
+  document.getElementById('quiz-live-card').style.display = 'none';
+  document.getElementById('quiz-result-card').style.display = '';
+  const body = document.getElementById('quizResultBody');
+  if (!body) return;
+  body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">결과 집계 중...</div>';
+
+  if (!db || !roomCode) {
+    body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Firebase 연결 필요</div>';
+    return;
+  }
+  const snap = await db.ref(fbPath('quizAnswers')).once('value');
+  const data = snap.val() || {};
+  const total = hostQuizQuestions.length;
+
+  // 닉네임별 점수 집계
+  const scores = {};
+  Object.values(data).forEach(r => {
+    const nick = r.nickname || '익명';
+    if (!scores[nick]) scores[nick] = { score: 0, time: r.time || 0 };
+    if (r.correct) scores[nick].score++;
+  });
+
+  const ranked = Object.entries(scores)
+    .sort((a, b) => b[1].score - a[1].score || a[1].time - b[1].time);
+
+  const medals = ['🥇', '🥈', '🥉'];
+  body.innerHTML =
+    '<div style="text-align:center;margin-bottom:20px;">' +
+    '<div style="font-size:22px;font-weight:900;color:var(--theme-a);">퀴즈 결과</div>' +
+    '<div style="font-size:13px;color:var(--muted);margin-top:4px;">총 ' + total + '문제 · ' + ranked.length + '명 참여</div></div>' +
+    (ranked.length === 0 ?
+      '<div style="text-align:center;color:var(--muted);padding:20px;">아직 답변이 없어요</div>' :
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+      ranked.map(([nick, s], i) =>
+        '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:' +
+        (i === 0 ? 'linear-gradient(90deg,#fffbe6,#fff8d0)' : 'var(--off)') +
+        ';border:1.5px solid ' + (i === 0 ? '#f5c842' : 'var(--border)') + ';">' +
+        '<span style="font-size:22px;width:32px;text-align:center;">' + (medals[i] || (i + 1) + '위') + '</span>' +
+        '<div style="flex:1;">' +
+        '<div style="font-weight:800;font-size:14px;">' + nick + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;">' +
+        '<div style="font-size:18px;font-weight:900;color:var(--theme-a);">' + s.score + ' / ' + total + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);">정답 ' + Math.round(s.score / total * 100) + '%</div>' +
+        '</div></div>'
+      ).join('') + '</div>') +
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:center;">' +
+    '<button class="btn-outline" onclick="stopQuiz()">✏️ 다시 편집</button></div>';
+}
+
+function stopQuiz() {
+  document.getElementById('quiz-edit-card').style.display = '';
+  document.getElementById('quiz-live-card').style.display = 'none';
+  document.getElementById('quiz-result-card').style.display = 'none';
+  if (db && roomCode) {
+    db.ref(fbPath('quizAnswers')).off();
+    db.ref(fbPath('activeActivity')).set('quiz_edit');
   }
 }
 
-function answerQuiz(idx){
-  if(quizAnswered) return; quizAnswered=true;
-  const qs=hostQuizQuestions.length?hostQuizQuestions:(quizzes[ctx]||quizzes.edu);
-  const q=qs[quizIdx];
-  document.querySelectorAll('.q-opt').forEach(b=>b.style.pointerEvents='none');
-  if(idx===q.correct){document.getElementById('qo'+idx).classList.add('correct');quizScore++;totalResponses++;updateStats();addFeed('퀴즈 정답! 🎉','#22a05a');}
-  else{document.getElementById('qo'+idx).classList.add('wrong');const c=document.getElementById('qo'+q.correct);if(c)c.classList.add('correct');addFeed('퀴즈 오답 😅','#e05050');}
-  setTimeout(()=>{quizIdx++;renderQuiz();},2000);
+function switchActivity(act, btn) {
+  document.querySelectorAll('.activity-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('ap-' + act).classList.add('active');
+  document.querySelectorAll('.act-btn,.nav-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const acts = ['poll', 'wordcloud', 'qa', 'quiz', 'rating', 'slider', 'postit'];
+  const idx = acts.indexOf(act);
+  const actBtns = document.querySelectorAll('#actNav .act-btn');
+  if (actBtns[idx]) actBtns[idx].classList.add('active');
+  const navTabs = document.querySelectorAll('.nav-tabs .nav-tab');
+  if (navTabs[idx]) navTabs[idx].classList.add('active');
+  if (isHost && db && roomCode) {
+    if (act === 'quiz') {
+      const liveCard = document.getElementById('quiz-live-card');
+      const resultCard = document.getElementById('quiz-result-card');
+      if (liveCard && liveCard.style.display !== 'none') db.ref(fbPath('activeActivity')).set('quiz');
+      else if (resultCard && resultCard.style.display !== 'none') db.ref(fbPath('activeActivity')).set('quiz');
+      else db.ref(fbPath('activeActivity')).set('quiz_edit');
+    } else {
+      db.ref(fbPath('activeActivity')).set(act);
+    }
+  }
+  if (act === 'quiz' && !hostQuizQuestions.length) loadDefaultQuiz();
 }
 
-function restartQuiz(){quizIdx=0;quizScore=0;quizAnswered=false;renderQuiz();}
+// 더미 함수 (하위 호환)
+function renderQuiz() {}
+function answerQuiz() {}
+function restartQuiz() { stopQuiz(); }
 
 // ============================================================
 //   RATING
@@ -2479,7 +2742,7 @@ async function resetSlider(){await fbSet('slider',[]);sliderResponses=[];renderS
 // ============================================================
 //   QR CODE GENERATOR (순수 JS, 외부 라이브러리 없음)
 // ============================================================
-// QR 생성 - 현재 도메인 기반 URL
+// QR 생성 - 현재 도메인 기반 동적 URL
 function drawQR(url) {
   const canvas = document.getElementById('qrCanvas');
   if (!canvas) return;
@@ -2531,11 +2794,15 @@ let participantNickname = '';
 function confirmNickname() {
   const input = document.getElementById('nicknameInput');
   participantNickname = input ? input.value.trim() : '';
-  if (!participantNickname) participantNickname = '익명';
+  if (!participantNickname) participantNickname = '익명' + Math.floor(Math.random()*900+100);
 
   // 배지 표시
   const badge = document.getElementById('pNicknameBadge');
   if (badge) { badge.textContent = '👤 ' + participantNickname; badge.style.display = 'block'; }
+
+  // 세션 제목 옆 닉네임 표시
+  const titleNick = document.getElementById('pSessionNickname');
+  if (titleNick) titleNick.textContent = participantNickname;
 
   // 오버레이 닫기
   const overlay = document.getElementById('nicknameOverlay');
@@ -2544,6 +2811,8 @@ function confirmNickname() {
   addFeed(`${participantNickname} 님이 입장했습니다`, '#22a05a');
   if (db && roomCode) {
     db.ref(`sessions/${roomCode}/participants`).transaction(n => (n || 0) + 1);
+    // Firebase에 닉네임 저장 (퀴즈 결과표 등에 활용)
+    attachParticipantNickname(roomCode, participantNickname);
   }
 }
 
@@ -2566,10 +2835,7 @@ function updateParticipantView(act) {
   if (!pTitle || !pContent) return;
 
   if (act === 'poll') {
-    const pTitle = document.getElementById('pTitle');
-    const pContent = document.getElementById('pContent');
-    if(pTitle) pTitle.textContent = '실시간 투표';
-    if(pContent) pContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 투표를 시작하면 여기에 표시됩니다.</div>';
+    // poll은 Firebase 리스너가 따로 처리
   } else if (act === 'wordcloud') {
     pTitle.textContent = '워드클라우드 — 단어 입력';
     pContent.innerHTML = `
@@ -2602,9 +2868,11 @@ function updateParticipantView(act) {
         <span>${minLbl}</span><span id="pSliderVal" style="font-weight:700;color:var(--theme-a);">50</span><span>${maxLbl}</span>
       </div>
       ${submitBtn('제출하기', 'submitParticipantSlider()')}`;
+  } else if (act === 'postit') {
+    // postit은 joinSessionFirebase의 activeActivity 리스너가 처리
   } else {
     pTitle.textContent = '잠시만 기다려 주세요';
-    pContent.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 활동을 시작하면 여기에 표시됩니다.</div>`;
+    pContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 활동을 시작하면 여기에 표시됩니다.</div>';
   }
 }
 
@@ -3195,6 +3463,9 @@ async function loadSavedItem(id){
     });
 
     fbOn('rating','value', s=>{ ratings=s.val()||[]; if(document.getElementById('ap-rating')?.classList.contains('active')){ updateRatingResult(); updateCount('cnt-rating',ratings.length); }});
+    fbOn('postits','value', s=>{
+      postitData=s.val()||{}; if(document.getElementById('ap-postit')?.classList.contains('active')){ renderPostitBoard(); updateCount('cnt-postit',Object.keys(postitData).length); }
+    });
     fbOn('slider','value', s=>{ sliderResponses=s.val()||[]; if(document.getElementById('ap-slider')?.classList.contains('active')){ renderSliderResults(); updateCount('cnt-slider',sliderResponses.length); }});
 
     db.ref('.info/connected').on('value', s=>setFbStatus(s.val()?'connected':'offline'));
@@ -3785,7 +4056,7 @@ async function submitQuickQA(){
   const anon = document.getElementById('qaAnonToggle')?.checked;
   const txt = (input?.value||'').trim();
   if(!txt){ alert('질문을 입력해 주세요.'); return; }
-  const nickToSend = anon ? '익명' : (participantNickname || '참여자');
+  const nickToSend = anon ? '익명' : (nickname || '익명');
   const payload = { q: txt, nick: nickToSend, ts: Date.now(), votes: 0 };
 
   if(!FIREBASE_READY || !db){
