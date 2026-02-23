@@ -3668,7 +3668,8 @@ function selectCtx(c) {
 // ── 새 세션 만들기 ──
 function createNewSession() {
   const title = (document.getElementById('sessionTitleInput')?.value || '').trim();
-  startAsHost(ctx || 'edu', 'poll', title);
+  // PIN 인증 후 세션 시작
+  showAdminPinOverlay([ctx || 'edu', 'poll', title]);
 }
 
 // ── 링크 복사 ──
@@ -3744,7 +3745,7 @@ function deleteLocalSession(idx) {
 }
 
 function resumeSession(code, c) {
-  startAsHost(c || 'edu', 'poll');
+  showAdminPinOverlay([c || 'edu', 'poll', '']);
 }
 
 // ── 저장된 세션/템플릿 오버레이 ──
@@ -3864,22 +3865,129 @@ function refreshUnifiedHistory() {
   ).join('');
 }
 
-// ── 관리자 PIN ──
-const ADMIN_PIN = '1234';
-function showAdminPinOverlay() {
-  const ov = document.getElementById('adminPinOverlay');
-  if (ov) ov.style.display = 'flex';
+// ── 관리자 PIN (Firebase 저장) ──
+const FIREBASE_PIN_PATH = 'config/adminPin';
+let _adminVerified = false;
+let _pendingHostArgs = null; // PIN 인증 후 실행할 startAsHost 인자 저장
+
+// Firebase에서 PIN 가져오기
+async function getStoredPin() {
+  if (!db) return null;
+  try {
+    const snap = await db.ref(FIREBASE_PIN_PATH).once('value');
+    return snap.val() || null;
+  } catch(e) { return null; }
 }
-function verifyAdminPin() {
+
+// PIN 오버레이 열기 (새 세션 만들기 버튼에서 호출)
+async function showAdminPinOverlay(hostArgs) {
+  _pendingHostArgs = hostArgs || null;
+  const ov = document.getElementById('adminPinOverlay');
+  if (!ov) return;
+  showAdminLogin();
+  ov.style.display = 'flex';
+
+  // PIN이 아직 없으면 안내 표시
+  const stored = await getStoredPin();
+  const note = document.getElementById('adminFirstSetupNote');
+  if (note) note.style.display = stored ? 'none' : 'block';
+
   const input = document.getElementById('adminPinInput');
-  const val = input ? input.value : '';
-  if (val === ADMIN_PIN) {
-    const ov = document.getElementById('adminPinOverlay');
-    if (ov) ov.style.display = 'none';
-    alert('✅ 관리자 인증 완료');
-  } else {
-    alert('❌ PIN이 올바르지 않습니다');
-    if (input) { input.value = ''; input.focus(); }
+  if (input) { input.value = ''; setTimeout(() => input.focus(), 100); }
+}
+
+function closeAdminPinOverlay() {
+  const ov = document.getElementById('adminPinOverlay');
+  if (ov) ov.style.display = 'none';
+  _pendingHostArgs = null;
+}
+
+function showAdminLogin() {
+  document.getElementById('adminLoginView').style.display = 'block';
+  document.getElementById('adminChangeView').style.display = 'none';
+  const err = document.getElementById('adminPinError');
+  if (err) err.textContent = '';
+}
+
+function showAdminPinChange() {
+  document.getElementById('adminLoginView').style.display = 'none';
+  document.getElementById('adminChangeView').style.display = 'block';
+  const err = document.getElementById('adminChangeError');
+  if (err) err.textContent = '';
+  ['adminOldPin','adminNewPin','adminNewPin2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  setTimeout(() => document.getElementById('adminOldPin')?.focus(), 100);
+}
+
+async function verifyAdminPin() {
+  const input = document.getElementById('adminPinInput');
+  const err = document.getElementById('adminPinError');
+  const val = (input ? input.value : '').trim();
+  if (!val) { if(err) err.textContent = 'PIN을 입력해 주세요.'; return; }
+
+  const stored = await getStoredPin();
+
+  // PIN 미설정 상태
+  if (!stored) {
+    if(err) err.textContent = 'PIN이 설정되지 않았어요. PIN 변경에서 먼저 설정해 주세요.';
+    return;
+  }
+
+  if (val !== stored) {
+    if(err) err.textContent = '❌ PIN이 올바르지 않습니다.';
+    if(input) { input.value = ''; input.focus(); }
+    return;
+  }
+
+  // 인증 성공
+  _adminVerified = true;
+  closeAdminPinOverlay();
+
+  // 대기 중이던 startAsHost 실행
+  if (_pendingHostArgs) {
+    const [c, act, title] = _pendingHostArgs;
+    _pendingHostArgs = null;
+    startAsHost(c, act, title);
+  }
+}
+
+async function saveNewAdminPin() {
+  const oldEl = document.getElementById('adminOldPin');
+  const newEl = document.getElementById('adminNewPin');
+  const new2El = document.getElementById('adminNewPin2');
+  const err = document.getElementById('adminChangeError');
+
+  const oldVal = (oldEl ? oldEl.value : '').trim();
+  const newVal = (newEl ? newEl.value : '').trim();
+  const new2Val = (new2El ? new2El.value : '').trim();
+
+  if (err) err.textContent = '';
+
+  // 새 PIN 유효성 검사
+  if (!newVal || newVal.length < 4) { if(err) err.textContent = 'PIN은 4자리 이상이어야 해요.'; return; }
+  if (!/^\d+$/.test(newVal)) { if(err) err.textContent = '숫자만 입력해 주세요.'; return; }
+  if (newVal !== new2Val) { if(err) err.textContent = '새 PIN이 일치하지 않아요.'; return; }
+
+  // 기존 PIN 확인 (설정된 경우)
+  const stored = await getStoredPin();
+  if (stored && oldVal !== stored) {
+    if(err) err.textContent = '현재 PIN이 올바르지 않아요.';
+    if(oldEl) { oldEl.value = ''; oldEl.focus(); }
+    return;
+  }
+
+  // Firebase에 저장
+  if (!db) { if(err) err.textContent = 'Firebase 연결이 필요해요.'; return; }
+  try {
+    await db.ref(FIREBASE_PIN_PATH).set(newVal);
+    alert('✅ PIN이 저장됐어요!');
+    showAdminLogin();
+    const note = document.getElementById('adminFirstSetupNote');
+    if (note) note.style.display = 'none';
+  } catch(e) {
+    if(err) err.textContent = '저장 중 오류가 발생했어요.';
   }
 }
 
@@ -4025,16 +4133,47 @@ window.addEventListener('load', loadAppState);
 
 </script>
 
-  <!-- 관리자 PIN 입력 -->
-  <div id="adminPinOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:300;">
-    <div style="background:white;padding:28px;border-radius:20px;width:320px;text-align:center;">
-      <h3 style="margin-bottom:12px;">관리자 인증</h3>
-      <input id="adminPinInput" type="password" placeholder="관리자 PIN 입력"
-        style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;margin-bottom:14px;" />
-      <button onclick="verifyAdminPin()"
-        style="padding:10px 16px;border:none;border-radius:12px;background:#111;color:white;font-weight:700;cursor:pointer;">
-        확인
-      </button>
+  <!-- 관리자 PIN 오버레이 -->
+  <div id="adminPinOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:300;">
+    <div style="background:var(--surface-card);border:1px solid var(--border);padding:32px 28px;border-radius:24px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+
+      <!-- 로그인 화면 -->
+      <div id="adminLoginView">
+        <div style="font-size:20px;font-weight:900;margin-bottom:4px;">🔐 관리자 인증</div>
+        <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:20px;">PIN을 입력해 호스트 화면에 접근하세요</div>
+        <input id="adminPinInput" type="password" placeholder="PIN 입력" maxlength="8"
+          style="width:100%;padding:11px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-family:var(--font);font-size:18px;letter-spacing:6px;text-align:center;outline:none;margin-bottom:10px;color:var(--text);"
+          onkeydown="if(event.key==='Enter') verifyAdminPin()" />
+        <div id="adminPinError" style="color:#e05050;font-size:12px;font-weight:700;min-height:18px;margin-bottom:10px;text-align:center;"></div>
+        <button onclick="verifyAdminPin()" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--theme-g);color:#fff;font-weight:900;font-size:14px;cursor:pointer;font-family:var(--font);">확인</button>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button onclick="closeAdminPinOverlay()" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--off);font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text);">취소</button>
+          <button onclick="showAdminPinChange()" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--off);font-weight:700;cursor:pointer;font-family:var(--font);color:var(--muted);">🔑 PIN 변경</button>
+        </div>
+        <div id="adminFirstSetupNote" style="display:none;margin-top:14px;padding:10px 12px;background:var(--theme-l);border-radius:10px;font-size:12px;color:var(--theme-a);font-weight:800;text-align:center;">
+          아직 PIN이 설정되지 않았어요.<br>PIN 변경에서 먼저 설정해 주세요.
+        </div>
+      </div>
+
+      <!-- PIN 설정/변경 화면 -->
+      <div id="adminChangeView" style="display:none;">
+        <div style="font-size:20px;font-weight:900;margin-bottom:4px;">🔑 PIN 설정</div>
+        <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:20px;">새 PIN을 설정하세요 (4~8자리 숫자)</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">현재 PIN (처음 설정이라면 비워두세요)</div>
+        <input id="adminOldPin" type="password" placeholder="현재 PIN" maxlength="8"
+          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--off);font-family:var(--font);font-size:16px;letter-spacing:4px;text-align:center;outline:none;margin-bottom:12px;color:var(--text);" />
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">새 PIN</div>
+        <input id="adminNewPin" type="password" placeholder="새 PIN (4~8자리)" maxlength="8"
+          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--off);font-family:var(--font);font-size:16px;letter-spacing:4px;text-align:center;outline:none;margin-bottom:8px;color:var(--text);" />
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">새 PIN 확인</div>
+        <input id="adminNewPin2" type="password" placeholder="새 PIN 재입력" maxlength="8"
+          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--off);font-family:var(--font);font-size:16px;letter-spacing:4px;text-align:center;outline:none;margin-bottom:10px;color:var(--text);"
+          onkeydown="if(event.key==='Enter') saveNewAdminPin()" />
+        <div id="adminChangeError" style="color:#e05050;font-size:12px;font-weight:700;min-height:18px;margin-bottom:10px;text-align:center;"></div>
+        <button onclick="saveNewAdminPin()" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--theme-g);color:#fff;font-weight:900;font-size:14px;cursor:pointer;font-family:var(--font);">저장</button>
+        <button onclick="showAdminLogin()" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--off);font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text);">← 돌아가기</button>
+      </div>
+
     </div>
   </div>
 
