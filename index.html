@@ -1519,6 +1519,7 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="form-group" style="margin-bottom:14px;">
               <label class="form-label">⏱ 문제당 제한 시간</label>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+                <button class="quiz-timer-btn" data-sec="5" onclick="setQuizTimer(5,this)">5초</button>
                 <button class="quiz-timer-btn" data-sec="10" onclick="setQuizTimer(10,this)">10초</button>
                 <button class="quiz-timer-btn active" data-sec="20" onclick="setQuizTimer(20,this)">20초</button>
                 <button class="quiz-timer-btn" data-sec="30" onclick="setQuizTimer(30,this)">30초</button>
@@ -2911,7 +2912,7 @@ function renderQuizMonitor(qIdx) {
     (qIdx < qs.length-1 ?
       '<button class="btn-launch" onclick="hostNextQuestion(' + (qIdx+1) + ')">다음 문제 →</button>' :
       '<button class="btn-launch" onclick="showQuizResults()">🏆 결과 보기</button>') +
-    '<button class="btn-outline" onclick="stopQuiz()">종료</button></div>';
+    '<button class="btn-outline" onclick="showQuizResults()">📊 종합 결과</button></div>';
 
   // 실시간 카운트다운
   if (quizTimerSec > 0) {
@@ -2995,8 +2996,16 @@ async function showQuizResults() {
       '<div style="font-size:18px;font-weight:900;color:var(--theme-a);">' + s.score + ' / ' + total + '</div>' +
       '<div style="font-size:11px;color:var(--muted);">정답률 ' + Math.round(s.score/total*100) + '%</div></div></div>'
     ).join('') + '</div>') +
-    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:center;">' +
-    '<button class="btn-outline" onclick="stopQuiz()">✏️ 다시 편집</button></div>';
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' +
+    '<button class="btn-outline" onclick="backToQuizLive()">← 퀴즈로 돌아가기</button>' +
+    '<button class="btn-outline" onclick="stopQuiz()" style="border-color:#ffb3b3;color:#b10000;">✏️ 편집 / 종료</button></div>';
+}
+
+// 결과 화면에서 퀴즈 진행 화면으로 복귀
+function backToQuizLive() {
+  document.getElementById('quiz-live-card').style.display = '';
+  document.getElementById('quiz-result-card').style.display = 'none';
+  renderQuizMonitor(currentMonitorQ);
 }
 
 function stopQuiz() {
@@ -3808,9 +3817,8 @@ async function submitParticipantQA(){
 
   const anon = !!document.getElementById('qaModalAnon')?.checked || !!document.getElementById('qaAnonToggle')?.checked;
 
-  // nickname is set when joining; fallback to participantNickname if present
-  const nickVal = (typeof nickname !== 'undefined' && nickname) ? nickname : (typeof participantNickname !== 'undefined' ? participantNickname : '');
-  const author = anon ? '익명' : (nickVal || '익명');
+  // 익명 선택 시 '익명', 아닐 시 participantNickname 사용
+  const author = anon ? '익명' : (participantNickname || '익명');
 
   // Button lock to avoid "안 눌리는 것처럼" 보이는 중복클릭/연타 이슈 방지
   const primaryBtn = document.querySelector('#qaModal .small-btn.primary');
@@ -3874,8 +3882,9 @@ async function submitQuickQA(){
   const anon = document.getElementById('qaAnonToggle')?.checked;
   const txt = (input?.value||'').trim();
   if(!txt){ alert('질문을 입력해 주세요.'); return; }
-  const nickToSend = anon ? '익명' : (nickname || '익명');
-  const payload = { q: txt, nick: nickToSend, ts: Date.now(), votes: 0 };
+  // 익명 선택 시 '익명', 아닐 시 실제 닉네임 사용
+  const nickToSend = anon ? '익명' : (participantNickname || '익명');
+  const payload = { q: txt, nick: nickToSend, author: nickToSend, ts: Date.now(), votes: 0, answered: false };
 
   if(!FIREBASE_READY || !db){
     // Demo/offline fallback: store locally so user doesn't feel blocked
@@ -3892,7 +3901,9 @@ async function submitQuickQA(){
 
   await db.ref(`sessions/${roomCode}/qa`).push(payload);
   if(input) input.value='';
-  try{ alert('질문을 보냈어요!'); }catch(e){}
+  // 성공 피드백 (alert 대신 부드럽게)
+  const sendBtn = document.getElementById('qaQuickSend');
+  if(sendBtn){ const orig=sendBtn.textContent; sendBtn.textContent='✅ 전송됨!'; sendBtn.style.background='#22a05a'; setTimeout(()=>{ sendBtn.textContent=orig; sendBtn.style.background=''; }, 1500); }
 }
 
 
