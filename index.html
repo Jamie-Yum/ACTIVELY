@@ -2090,7 +2090,27 @@ async function joinSessionFirebase(code) {
         });
       } else if(act==='rating'){
         renderParticipantRating(code);
-      } else if(act==='quiz'||act==='quiz_edit'){
+      } else if(act==='quiz'){
+        // quiz activeActivity → 즉시 quiz 데이터 읽어서 렌더 (이미 시작된 경우 대응)
+        db.ref(`sessions/${code}/quiz`).once('value').then(qs=>{
+          const d=qs.val();
+          if(d&&d.started&&Array.isArray(d.questions)&&d.questions.length>0){
+            if(d.ts!==pLastQuizTs){
+              pLastQuizTs=d.ts; pQuizScore=0; pQuizAnswered=false; pSelectedAnswerIdx=-1;
+              pCurrentQuizQuestions=d.questions;
+              pQuizTimerSec=d.timerSec!==undefined?d.timerSec:20;
+              const startQ=d.currentQ!==undefined?d.currentQ:0;
+              pCurrentQuizQIdx=startQ;
+            }
+            // 항상 현재 문제 렌더 (이미 진행 중인 문제도 즉시 표시)
+            renderParticipantQuiz(code, pCurrentQuizQuestions, pCurrentQuizQIdx);
+          } else {
+            if(!pTitle||!pContent) return;
+            pTitle.textContent='퀴즈';
+            pContent.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 퀴즈를 시작하면 여기에 표시됩니다.</div>';
+          }
+        });
+      } else if(act==='quiz_edit'){
         if(!pTitle||!pContent) return;
         pTitle.textContent='퀴즈';
         pContent.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 퀴즈를 시작하면 여기에 표시됩니다.</div>';
@@ -2118,6 +2138,14 @@ async function joinSessionFirebase(code) {
       if(d && d.items && Array.isArray(d.items) && d.items.length) {
         showQAShowOverlay(d);
       }
+    });
+
+    // ★ 만족도 실시간: 발표자가 다른 문항 전송하면 참여자 화면 즉시 전환
+    // activeActivity 체크 없이 ratingActiveId 변경만으로 즉시 렌더 (타이밍 이슈 해결)
+    db.ref(`sessions/${code}/ratingActiveId`).on('value', s=>{
+      const newId = s.val();
+      if(!newId) return;
+      renderParticipantRating(code);
     });
 
     // 투표 실시간 리스너
@@ -2164,8 +2192,8 @@ async function joinSessionFirebase(code) {
           const pTitle=document.getElementById('pTitle');
           const pContent=document.getElementById('pContent');
           if(pTitle) pTitle.textContent='퀴즈 진행 중';
-          if(pContent) pContent.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:14px;">⏳ 문제 로딩 중...</div>';
-          setTimeout(()=>renderParticipantQuiz(code, d.questions, startQ), 150);
+          // 바로 렌더 (지연 없이 실시간)
+          renderParticipantQuiz(code, d.questions, startQ);
         }
       }
     });
@@ -2247,6 +2275,10 @@ function renderParticipantRating(code){
     if(!id){ pTitle.textContent='만족도 체크'; pContent.innerHTML='<div style="text-align:center;padding:28px;color:var(--muted);font-weight:800;">아직 문항이 전송되지 않았어요.</div>'; return; }
     activeRatingId=id; // rate()가 같은 id로 저장하도록
 
+    // 이미 이 문항을 제출했는지 확인
+    const submittedKey = 'ratingSubmitted_' + code + '_' + id;
+    const alreadySubmitted = window._ratingSubmitted && window._ratingSubmitted[submittedKey];
+
     Promise.all([
       db.ref(`sessions/${code}/ratingItems/${id}`).once('value'),
       db.ref(`sessions/${code}/ratingVotes/${id}`).once('value')
@@ -2261,17 +2293,30 @@ function renderParticipantRating(code){
       pTitle.textContent=item.title||'만족도 체크';
       const g=iconGlyph(item.icon||'star');
 
+      if(alreadySubmitted){
+        // 이미 제출한 경우 완료 화면
+        pContent.innerHTML = `
+          <div style="text-align:center;padding:20px 0;">
+            <div style="font-size:48px;margin-bottom:12px;">✅</div>
+            <div style="font-size:18px;font-weight:800;color:var(--theme-a);margin-bottom:8px;">응답 완료!</div>
+            <div style="font-size:13px;color:var(--muted);">이 문항에 이미 응답했어요.<br>다음 문항이 전송될 때 화면이 바뀝니다.</div>
+          </div>`;
+        return;
+      }
+
+      let pSelectedRatingVal = 0;
       pContent.innerHTML = `
         <div style="text-align:center;">
-          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:10px;">아래 아이콘을 눌러 응답해 주세요</div>
-          <div class="rating-stars" id="pRatingStars" style="font-size:44px;gap:12px;">
-            ${Array.from({length:5},(_,i)=>`<span class="star" onclick="rate(${i+1})">${g}</span>`).join('')}
+          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:14px;">아래 아이콘을 눌러 응답해 주세요</div>
+          <div id="pRatingStars" style="display:flex;justify-content:center;gap:12px;font-size:44px;margin-bottom:12px;">
+            ${Array.from({length:5},(_,i)=>`<span style="cursor:pointer;opacity:0.32;transition:all 0.15s;" id="prs${i}" onclick="pParticipantSelectStar(${i+1},'${id}','${code}')" onmouseover="pParticipantHoverStar(${i+1})" onmouseout="pParticipantUnhoverStar('${id}')">${g}</span>`).join('')}
           </div>
-          <div style="margin-top:12px;font-size:12px;color:var(--muted);" id="pRatingMini">실시간 평균/분포는 발표자 화면에서 확인돼요</div>
+          <div style="min-height:22px;font-size:14px;color:var(--muted);margin-bottom:16px;" id="pRatingLabel">별점을 선택해 주세요</div>
+          <div id="pRatingSubmitArea"></div>
         </div>
       `;
 
-      // votes 변화도 따라가서 badge 업데이트 (가벼운 on)
+      // votes 변화 따라가기
       const ref = db.ref(`sessions/${code}/ratingVotes/${id}`);
       if(window._pRatingVotesRef) window._pRatingVotesRef.off();
       window._pRatingVotesRef = ref;
@@ -2312,7 +2357,8 @@ function renderParticipantQuiz(code, questions, qIdx) {
     '<div style="text-align:right;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px;" id="pTimerLabel">남은 시간: <span id="pTimerNum">'+pQuizTimerSec+'</span>초</div>' : '';
 
   pContent.innerHTML=timerHtml+
-    '<div style="font-size:16px;font-weight:800;margin-bottom:16px;line-height:1.5;color:var(--text);">'+q.q+'</div>'+
+    '<div style="font-size:16px;font-weight:800;margin-bottom:' + (q.imageBase64?'10px':'16px') + ';line-height:1.5;color:var(--text);">'+q.q+'</div>'+
+    (q.imageBase64 ? '<img src="'+q.imageBase64+'" style="width:100%;max-height:220px;border-radius:10px;object-fit:contain;margin-bottom:16px;border:1px solid var(--border);">' : '')+
     '<div id="pQuizOpts">'+
     q.opts.map((o,i)=>
       '<button id="pqo'+i+'" onclick="selectParticipantAnswer('+i+')" '+
@@ -2816,6 +2862,17 @@ function renderQuizEditList() {
     '<span style="font-size:12px;font-weight:700;color:var(--muted);">Q' + (qi+1) + '</span>' +
     '<input type="text" class="form-input" value="' + q.q.replace(/"/g,'&quot;') + '" style="flex:1;" onchange="hostQuizQuestions[' + qi + '].q=this.value">' +
     '<button onclick="removeQuizQuestion(' + qi + ')" style="border:1px solid var(--border2);background:transparent;border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;">✕</button></div>' +
+    // 이미지 첨부 영역
+    '<div style="margin-bottom:10px;">' +
+    '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:7px 12px;border:1.5px dashed var(--border2);border-radius:8px;font-size:12px;font-weight:700;color:var(--muted);transition:all 0.15s;" onmouseover="this.style.borderColor=\'var(--theme-a)\';this.style.color=\'var(--theme-a)\'" onmouseout="this.style.borderColor=\'var(--border2)\';this.style.color=\'var(--muted)\'">' +
+    '📷 이미지 첨부' +
+    '<input type="file" accept="image/*" style="display:none;" onchange="attachQuizImage(' + qi + ',this)"></label>' +
+    (q.imageBase64 ?
+      '<span style="margin-left:8px;font-size:11px;color:var(--theme-a);font-weight:700;">✅ 이미지 첨부됨</span>' +
+      '<button onclick="removeQuizImage(' + qi + ')" style="margin-left:6px;border:none;background:none;color:#e05050;font-size:12px;cursor:pointer;font-weight:700;">✕ 제거</button>' +
+      '<div style="margin-top:8px;"><img src="' + q.imageBase64 + '" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:contain;border:1px solid var(--border);"></div>'
+      : '') +
+    '</div>' +
     '<div style="display:flex;flex-direction:column;gap:6px;">' +
     q.opts.map((o, oi) =>
       '<div style="display:flex;gap:6px;align-items:center;">' +
@@ -2824,6 +2881,23 @@ function renderQuizEditList() {
     ).join('') +
     '</div><div style="font-size:11px;color:var(--muted);margin-top:6px;">라디오로 정답 선택</div></div>'
   ).join('');
+}
+
+function attachQuizImage(qi, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { alert('이미지는 2MB 이하만 첨부 가능해요.'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    hostQuizQuestions[qi].imageBase64 = e.target.result;
+    renderQuizEditList();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeQuizImage(qi) {
+  hostQuizQuestions[qi].imageBase64 = null;
+  renderQuizEditList();
 }
 
 function addQuizQuestion() {
@@ -2835,8 +2909,16 @@ function removeQuizQuestion(idx) { hostQuizQuestions.splice(idx,1); renderQuizEd
 async function launchQuizToParticipants() {
   if (!hostQuizQuestions.length) { alert('문제를 먼저 추가해 주세요.'); return; }
   quizAnswerCounts = {};
+  const quizTs = Date.now();
   if (FIREBASE_READY && db && roomCode) {
-    await db.ref(fbPath('quiz')).set({questions:hostQuizQuestions, started:true, timerSec:quizTimerSec, ts:Date.now()});
+    // quiz 데이터와 currentQ를 한번에 설정 (참여자의 quiz.on('value')가 즉시 트리거됨)
+    await db.ref(fbPath('quiz')).set({
+      questions: hostQuizQuestions,
+      started: true,
+      timerSec: quizTimerSec,
+      ts: quizTs,
+      currentQ: 0
+    });
     await db.ref(fbPath('quizAnswers')).remove();
     await db.ref(fbPath('activeActivity')).set('quiz');
   }
@@ -2844,10 +2926,6 @@ async function launchQuizToParticipants() {
   document.getElementById('quiz-live-card').style.display = '';
   document.getElementById('quiz-result-card').style.display = 'none';
   currentMonitorQ = 0;
-  // 참여자에게 현재 문제 번호 알림
-  if (FIREBASE_READY && db && roomCode) {
-    await db.ref(fbPath('quiz/currentQ')).set(0);
-  }
   renderQuizMonitor(0);
   addFeed('퀴즈 시작! 참여자에게 전송됨', 'var(--theme-a)');
   if (db && roomCode) {
@@ -2885,7 +2963,8 @@ function renderQuizMonitor(qIdx) {
   body.innerHTML =
     '<div style="text-align:center;margin-bottom:16px;">' +
     '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;">문제 ' + (qIdx+1) + ' / ' + qs.length + '</div>' +
-    '<div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:14px;">' + q.q + '</div>' +
+    '<div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:' + (q.imageBase64?'10px':'14px') + ';">' + q.q + '</div>' +
+    (q.imageBase64 ? '<img src="' + q.imageBase64 + '" style="max-width:100%;max-height:200px;border-radius:10px;object-fit:contain;margin-bottom:14px;border:1px solid var(--border);">' : '') +
     // 타이머 표시
     (quizTimerSec > 0 ?
       '<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px;">' +
@@ -3784,6 +3863,73 @@ let pSelectedRating = 0;
 const ratingEmoji = ['', '😞', '😕', '😐', '😊', '🌟'];
 const ratingWord = ['', '형편없어요', '아쉬워요', '보통이에요', '좋아요', '매우 좋아요'];
 
+// ── 새 만족도 참여자 별점 함수 (renderParticipantRating 전용) ──
+let _pParticipantCurrentStar = 0;
+
+function pParticipantHoverStar(n) {
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('prs'+i);
+    if(el){ el.style.opacity=(i<n)?'1':'0.32'; el.style.transform=(i<n)?'scale(1.1)':'scale(1)'; }
+  }
+  const lbl=document.getElementById('pRatingLabel');
+  if(lbl) lbl.textContent=ratingEmoji[n]+' '+ratingWord[n];
+}
+
+function pParticipantUnhoverStar(id) {
+  const n=_pParticipantCurrentStar;
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('prs'+i);
+    if(el){ el.style.opacity=(i<n)?'1':'0.32'; el.style.transform=(i<n)?'scale(1.1)':'scale(1)'; }
+  }
+  const lbl=document.getElementById('pRatingLabel');
+  if(lbl) lbl.textContent=n?(ratingEmoji[n]+' '+ratingWord[n]):'별점을 선택해 주세요';
+}
+
+function pParticipantSelectStar(n, itemId, code) {
+  _pParticipantCurrentStar = n;
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('prs'+i);
+    if(el){ el.style.opacity=(i<n)?'1':'0.32'; el.style.color=(i<n)?'var(--theme-a)':''; el.style.transform=(i<n)?'scale(1.1)':'scale(1)'; }
+  }
+  const lbl=document.getElementById('pRatingLabel');
+  if(lbl) lbl.textContent=ratingEmoji[n]+' '+ratingWord[n];
+  // 제출 버튼 표시
+  const area=document.getElementById('pRatingSubmitArea');
+  if(area) area.innerHTML=`
+    <button onclick="submitParticipantRatingNew(${n},'${itemId}','${code}')"
+      style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--theme-g);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 4px 14px rgba(0,0,0,0.12);">
+      ✅ 제출 완료
+    </button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;">제출 전에 별점을 다시 선택해 변경할 수 있어요</div>`;
+}
+
+async function submitParticipantRatingNew(score, itemId, code) {
+  if(!db||!code||!itemId) return;
+  const submittedKey='ratingSubmitted_'+code+'_'+itemId;
+  if(!window._ratingSubmitted) window._ratingSubmitted={};
+  if(window._ratingSubmitted[submittedKey]) return;
+  window._ratingSubmitted[submittedKey]=true;
+
+  await db.ref(`sessions/${code}/ratingVotes/${itemId}`).transaction(arr=>{
+    const a=Array.isArray(arr)?arr:[];
+    return a.concat([score]);
+  });
+  await db.ref(`sessions/${code}/responses`).transaction(n=>(n||0)+1);
+
+  // 완료 화면으로 전환
+  const pContent=document.getElementById('pContent');
+  if(pContent) pContent.innerHTML=`
+    <div style="text-align:center;padding:20px 0;">
+      <div style="font-size:56px;margin-bottom:12px;">${ratingEmoji[score]||'⭐'}</div>
+      <div style="font-size:20px;font-weight:800;color:var(--theme-a);margin-bottom:8px;">${score}점 · 응답 완료!</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">응답이 전달됐어요.<br>다음 문항이 전송되면 자동으로 화면이 바뀝니다.</div>
+    </div>`;
+  if(typeof pMyResponses!=='undefined'){
+    pMyResponses.push({type:'만족도',content:score+'점',time:new Date().toLocaleTimeString()});
+    renderMyResponses();
+  }
+}
+
 function pSelectStar(n) {
   pSelectedRating = n;
   updatePStars(n);
@@ -3903,7 +4049,16 @@ async function submitQuickQA(){
   if(input) input.value='';
   // 성공 피드백 (alert 대신 부드럽게)
   const sendBtn = document.getElementById('qaQuickSend');
-  if(sendBtn){ const orig=sendBtn.textContent; sendBtn.textContent='✅ 전송됨!'; sendBtn.style.background='#22a05a'; setTimeout(()=>{ sendBtn.textContent=orig; sendBtn.style.background=''; }, 1500); }
+  if(sendBtn){ 
+    const orig=sendBtn.textContent; 
+    const origBg = 'var(--theme-a)'; // 원래 색 (초록)
+    sendBtn.textContent='✅ 전송됨!'; 
+    sendBtn.style.background='#22a05a'; 
+    setTimeout(()=>{ 
+      sendBtn.textContent=orig; 
+      sendBtn.style.background=origBg; 
+    }, 1500); 
+  }
 }
 
 
