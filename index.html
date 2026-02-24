@@ -1264,29 +1264,20 @@ body.ui-dark #screen-participant { background: var(--off); }
   <div class="section-label">새 세션</div>
   <div class="new-session-card">
     <div class="new-session-left">
-      <div class="new-session-head">용도 선택</div>
-      <div class="new-session-chips">
-        <button class="chip active" id="chip-edu" onclick="selectCtx('edu')">🎓 강의 & 교육</button>
-        <button class="chip" id="chip-biz" onclick="selectCtx('biz')">💼 회사 발표 & 회의</button>
-        <button class="chip" id="chip-evt" onclick="selectCtx('evt')">🎉 이벤트 & 행사</button>
-      </div>
-      <div class="new-session-hint" id="ctxHint">선택: 강의 & 교육</div>
-      <div class="new-session-mini">기능은 동일하고, 추천 템플릿만 달라요.</div>
-
-      <!-- ✅ 세션 메타 정보 입력 -->
-      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
+      <div class="new-session-head">세션 정보</div>
+      <div style="margin-top:16px;display:grid;gap:14px;">
         <div>
-          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:6px;">📌 세션 이름</div>
-          <input id="sessionTitleInput" placeholder="예: 2월 SW 교육 / 팀 주간회의" style="width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;outline:none;color:var(--text);" />
+          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:7px;">📌 세션 제목</div>
+          <input id="sessionTitleInput" placeholder="예: 2월 SE 교육 / 팀 주간회의" style="width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;font-size:16px;outline:none;color:var(--text);transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--theme-a)'" onblur="this.style.borderColor='var(--border)'" />
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:130px;">
-            <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:6px;">📅 날짜</div>
-            <input id="sessionDateInput" type="date" style="width:100%;padding:9px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;outline:none;color:var(--text);" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:7px;">📅 날짜</div>
+            <input id="sessionDateInput" type="date" style="width:100%;padding:13px 14px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;font-size:14px;outline:none;color:var(--text);transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--theme-a)'" onblur="this.style.borderColor='var(--border)'" />
           </div>
-          <div style="flex:1;min-width:130px;">
-            <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:6px;">👥 대상</div>
-            <input id="sessionAudienceInput" placeholder="예: 개발팀 / 전체 직원" style="width:100%;padding:9px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;outline:none;color:var(--text);" />
+          <div>
+            <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:7px;">👥 대상</div>
+            <input id="sessionAudienceInput" placeholder="예: 마케팅팀, 신입사원" style="width:100%;padding:13px 14px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;font-size:14px;outline:none;color:var(--text);transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--theme-a)'" onblur="this.style.borderColor='var(--border)'" />
           </div>
         </div>
       </div>
@@ -1342,10 +1333,9 @@ body.ui-dark #screen-participant { background: var(--off); }
   </nav>
 
   <!-- 세션 제목 배너 -->
-  <div id="hostTitleBanner" style="display:none; background:var(--theme-l); border-bottom:2px solid var(--theme-a); padding:10px 28px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+  <div id="hostTitleBanner" style="display:none; background:var(--theme-l); border-bottom:2px solid var(--theme-a); padding:10px 28px; display:flex; align-items:center; gap:12px;">
     <span style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--theme-a);opacity:0.7;">세션</span>
     <span id="sessionTitleTop" style="font-size:22px;font-weight:900;color:var(--theme-h);letter-spacing:-0.5px;"></span>
-    <div id="sessionMetaBanner" style="display:flex;gap:8px;flex-wrap:wrap;margin-left:4px;"></div>
   </div>
 
   <div class="host-body">
@@ -1586,29 +1576,53 @@ body.ui-dark #screen-participant { background: var(--off); }
         <div class="card">
           <div class="card-header">
             <div class="card-header-icon">🎵</div>
-            <div class="card-title">배경음악</div>
+            <div class="card-title">배경음악 (YouTube)</div>
           </div>
           <div class="card-body">
+
+            <!-- URL 입력 -->
             <div class="form-group">
-              <label class="form-label">음원 URL (MP3 직접 링크)</label>
+              <label class="form-label">유튜브 링크 입력</label>
               <div style="display:flex;gap:8px;">
-                <input type="text" class="form-input" id="bgmUrl" placeholder="https://... .mp3" style="flex:1;">
-                <button class="btn-launch" onclick="playBGM()" style="white-space:nowrap;">▶ 재생</button>
+                <input type="text" class="form-input" id="bgmUrl"
+                  placeholder="https://www.youtube.com/watch?v=... 또는 youtu.be/..."
+                  style="flex:1;"
+                  onkeydown="if(event.key==='Enter') loadYouTubeBGM()">
+                <button class="btn-launch" onclick="loadYouTubeBGM()" style="white-space:nowrap;">▶ 재생</button>
               </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-              <button class="btn-outline" onclick="pauseBGM()">⏸ 일시정지</button>
-              <button class="btn-outline" onclick="stopBGM()">⏹ 정지</button>
-              <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--text);">
-                🔊 <input type="range" id="bgmVolume" min="0" max="1" step="0.05" value="0.5" oninput="setBGMVolume(this.value)" style="width:80px;accent-color:var(--theme-a);">
+
+            <!-- 컨트롤 -->
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+              <button class="btn-outline" onclick="ytBGMPlay()">▶ 재생</button>
+              <button class="btn-outline" onclick="ytBGMPause()">⏸ 일시정지</button>
+              <button class="btn-outline" onclick="ytBGMStop()">⏹ 정지</button>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--text);margin-left:4px;">
+                🔊 <input type="range" id="bgmVolume" min="0" max="100" step="5" value="50"
+                  oninput="ytBGMVolume(this.value)"
+                  style="width:90px;accent-color:var(--theme-a);">
               </label>
+              <span id="bgmVolLabel" style="font-size:12px;color:var(--muted);font-weight:700;">50%</span>
             </div>
-            <audio id="bgmPlayer" loop style="display:none;"></audio>
-            <div id="bgmStatus" style="font-size:12px;color:var(--muted);margin-top:8px;min-height:18px;"></div>
-            <div style="margin-top:18px;">
-              <div style="font-size:12px;font-weight:800;color:var(--muted);letter-spacing:1px;margin-bottom:10px;">🎧 추천 무료 음원</div>
-              <div style="display:flex;flex-direction:column;gap:6px;" id="bgmPresets"></div>
+
+            <!-- 상태 -->
+            <div id="bgmStatus" style="font-size:12px;color:var(--muted);margin-top:10px;min-height:18px;font-weight:700;"></div>
+
+            <!-- YouTube iframe (숨김 — 오디오만 사용) -->
+            <div id="ytPlayerWrap" style="margin-top:14px;border-radius:14px;overflow:hidden;display:none;">
+              <div id="ytPlayer"></div>
             </div>
+
+            <!-- 즐겨찾기 -->
+            <div style="margin-top:20px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="font-size:12px;font-weight:800;color:var(--muted);letter-spacing:1px;">🔖 저장된 트랙</div>
+                <button onclick="saveBGMTrack()" class="btn-outline" style="font-size:11px;padding:5px 10px;">+ 현재 트랙 저장</button>
+              </div>
+              <div id="bgmSavedList" style="display:flex;flex-direction:column;gap:6px;"></div>
+              <div id="bgmSavedEmpty" style="font-size:12px;color:var(--muted2);font-weight:700;display:none;">저장된 트랙이 없어요. 재생 후 [+ 현재 트랙 저장]을 눌러보세요.</div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -1948,12 +1962,12 @@ let ratings=[], sliderResponses=[];
 function fbPath(path) { return `sessions/${roomCode}/${path}`; }
 
 async function fbSet(path, value) {
-  if (db && roomCode) { try { await db.ref(fbPath(path)).set(value); return true; } catch(e){ console.warn('[ACTIVELY] fbSet 오류:', path, e); } }
+  if (db && roomCode) { try { await db.ref(fbPath(path)).set(value); return true; } catch(e){} }
   return false;
 }
 
 async function fbTransaction(path, fn) {
-  if (db && roomCode) { try { await db.ref(fbPath(path)).transaction(fn); return true; } catch(e){ console.warn('[ACTIVELY] fbTransaction 오류:', path, e); } }
+  if (db && roomCode) { try { await db.ref(fbPath(path)).transaction(fn); return true; } catch(e){} }
   return false;
 }
 
@@ -1975,7 +1989,6 @@ function fbOn(path, event, cb) {
 function fbOffAll() {
   fbListeners.forEach(({ref,event,cb}) => ref.off(event,cb));
   fbListeners = [];
-  ratingListenersAttached = false; // ✅ 세션 재시작 시 리스너 재등록 허용
 }
 
 function setFbStatus(status) {
@@ -1993,11 +2006,9 @@ async function initHostSession(c, initialAct) {
   isHost = true;
   if (db) {
     await db.ref(fbPath('')).set({
-      ctx:c, title: sessionTitle || '', date: sessionDate || '', audience: sessionAudience || '',
-      hostKey: hostKey || '', createdAt:Date.now(), active:true,
+      ctx:c, title: sessionTitle || '', hostKey: hostKey || '', createdAt:Date.now(), active:true,
       participants:0, responses:0, activeActivity:(initialAct||'poll'),
-      poll:{live:false,q:'',opts:[],votes:{}}, wordcloud:{}, ratingItems:{r1:{title:'오늘 세션은 어땠나요?',icon:'star'}}, ratingVotes:{r1:[]}, ratingActiveId:'r1', slider:[],
-      qaShow: null // ✅ 세션 시작 시 qaShow 초기화 (이전 오버레이 방지)
+      poll:{live:false,q:'',opts:[],votes:{}}, wordcloud:{}, ratingItems:{r1:{title:'오늘 세션은 어땠나요?',icon:'star'}}, ratingVotes:{r1:[]}, ratingActiveId:'r1', slider:[]
     });
 
     // Listeners
@@ -2056,18 +2067,12 @@ async function joinSessionFirebase(code) {
   if (!db) return false;
   try {
     const snap = await db.ref(`sessions/${code}`).once('value');
-    // ✅ active 필드가 명시적으로 false일 때만 거부 (undefined/null이면 허용)
-    // — 세션 데이터 일부가 아직 안 써진 경우도 대비
-    if (!snap.exists()) return false;
-    const val = snap.val();
-    if (val.active === false) return false; // 명시적으로 비활성화된 세션만 거부
-    roomCode=code; ctx=val.ctx||'edu'; isHost=false;
-    setParticipantSessionTitle(val.title||'');
+    if (!snap.exists()||!snap.val().active) return false;
+    roomCode=code; ctx=snap.val().ctx||'edu'; isHost=false;
+    setParticipantSessionTitle(snap.val().title||'');
     setTheme(ctx);
     db.ref(`sessions/${code}/title`).on('value', s=>setParticipantSessionTitle(s.val()||''));
     await db.ref(`sessions/${code}/participants`).transaction(n=>(n||0)+1);
-    // ✅ 참여자 퇴장 시 자동 감소 (onDisconnect)
-    db.ref(`sessions/${code}/participants`).onDisconnect().transaction(n=>Math.max(0,(n||1)-1));
 
     // 발표자 탭 전환 → 참여자 화면 즉시 전환
     db.ref(`sessions/${code}/activeActivity`).on('value', s=>{
@@ -2409,14 +2414,10 @@ function goToSetup() { startAsHost('edu','poll'); }
 let hostKey = localStorage.getItem('actively_hostKey') || (Date.now().toString(36)+Math.random().toString(36).slice(2,8));
 localStorage.setItem('actively_hostKey', hostKey);
 let sessionTitle = '';
-let sessionDate = '';    // ✅ 날짜
-let sessionAudience = ''; // ✅ 대상
 
-async function startAsHost(c, initialAct, title, date, audience) {
+async function startAsHost(c, initialAct, title) {
   ctx=c; setTheme(c); roomCode=genCode();
   sessionTitle = (title||'').toString().trim();
-  sessionDate = (date||'').toString().trim();
-  sessionAudience = (audience||'').toString().trim();
   setTopTitle(sessionTitle);
   const initAct = initialAct || 'poll';
   document.getElementById('navRoomCode').textContent=roomCode;
@@ -3205,14 +3206,6 @@ async function resetAllRatings() {
 async function rate(n) {
   if (!activeRatingId) { alert('먼저 문항이 전송되어야 해요!'); return; }
 
-  // ✅ 중복 응답 방지: 기기 ID + 문항 ID 조합으로 체크
-  const _cid = window._cid || (window._cid = 'u'+Date.now()+Math.random().toString(36).slice(2,6));
-  const ratingKey = `_ratingSubmitted_${activeRatingId}`;
-  if (window[ratingKey]) {
-    alert('이미 이 문항에 응답하셨어요!'); return;
-  }
-  window[ratingKey] = true;
-
   currentRating = n;
   updateStarDisplay(n);
   const lbl = document.getElementById('ratingLabel');
@@ -3456,129 +3449,170 @@ function renderPostitBoard() {
 }
 
 // ============================================================
-//   BGM
+//   BGM — YouTube IFrame API
 // ============================================================
-// 장르별 트랙 풀 (Pixabay 무료 음원)
-const bgmPool = {
-  jazz: {
-    label: '☕ 재즈', emoji: '☕',
-    tracks: [
-      'https://cdn.pixabay.com/download/audio/2022/03/10/audio_270f4d1902.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/08/02/audio_884fe92c21.mp3',
-      'https://cdn.pixabay.com/download/audio/2021/11/25/audio_5b6f29a523.mp3',
-    ]
-  },
-  upbeat: {
-    label: '⚡ 업비트', emoji: '⚡',
-    tracks: [
-      'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1bab.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b4b6228.mp3',
-      'https://cdn.pixabay.com/download/audio/2023/03/09/audio_2a5e8b7f94.mp3',
-    ]
-  },
-  citypop: {
-    label: '🌆 시티팝', emoji: '🌆',
-    tracks: [
-      'https://cdn.pixabay.com/download/audio/2022/11/22/audio_febc508520.mp3',
-      'https://cdn.pixabay.com/download/audio/2023/01/26/audio_8b5c63d5e7.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/08/23/audio_4a7898c4e2.mp3',
-    ]
-  },
-  classical: {
-    label: '🎹 클래식', emoji: '🎹',
-    tracks: [
-      'https://cdn.pixabay.com/download/audio/2022/01/27/audio_d0ef314a2c.mp3',
-      'https://cdn.pixabay.com/download/audio/2021/10/25/audio_2b3e21d8e8.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/04/27/audio_1ecbf00791.mp3',
-    ]
-  },
-  acoustic: {
-    label: '🎸 어쿠스틱', emoji: '🎸',
-    tracks: [
-      'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3',
-      'https://cdn.pixabay.com/download/audio/2022/10/12/audio_347870d1e0.mp3',
-      'https://cdn.pixabay.com/download/audio/2023/02/08/audio_9b85cfb2fc.mp3',
-    ]
-  },
+let ytPlayer = null;
+let ytPlayerReady = false;
+let ytPendingVideoId = null;
+let bgmSavedTracks = [];
+
+// YouTube IFrame API 동적 로드
+function loadYouTubeAPI() {
+  if (window.YT && window.YT.Player) { onYouTubeIframeAPIReady(); return; }
+  if (document.getElementById('yt-api-script')) return;
+  const s = document.createElement('script');
+  s.id = 'yt-api-script';
+  s.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
+}
+
+window.onYouTubeIframeAPIReady = function() {
+  ytPlayer = new YT.Player('ytPlayer', {
+    height: '180',
+    width: '100%',
+    videoId: '',
+    playerVars: { autoplay: 1, controls: 1, rel: 0, modestbranding: 1 },
+    events: {
+      onReady: (e) => {
+        ytPlayerReady = true;
+        e.target.setVolume(parseInt(document.getElementById('bgmVolume')?.value || 50));
+        if (ytPendingVideoId) {
+          e.target.loadVideoById(ytPendingVideoId);
+          ytPendingVideoId = null;
+        }
+      },
+      onStateChange: (e) => {
+        const states = { [-1]:'⏹ 정지', [0]:'⏹ 재생 완료', [1]:'▶ 재생 중', [2]:'⏸ 일시정지', [3]:'⏳ 버퍼링...', [5]:'⏸ 대기 중' };
+        const s = document.getElementById('bgmStatus');
+        if (s) s.textContent = states[e.data] || '';
+      },
+      onError: () => {
+        const s = document.getElementById('bgmStatus');
+        if (s) s.textContent = '❌ 재생 불가 — 저작권 제한 영상이거나 링크를 확인해 주세요';
+      }
+    }
+  });
 };
 
-let bgmCurrentGenre = null;
+function extractYouTubeId(url) {
+  if (!url) return null;
+  // youtu.be/ID
+  let m = url.match(/youtu\.be\/([^?&\s]+)/);
+  if (m) return m[1];
+  // youtube.com/watch?v=ID
+  m = url.match(/[?&]v=([^&\s]+)/);
+  if (m) return m[1];
+  // youtube.com/embed/ID
+  m = url.match(/embed\/([^?&\s]+)/);
+  if (m) return m[1];
+  // 혹시 ID만 입력한 경우 (11자리)
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url.trim())) return url.trim();
+  return null;
+}
 
+function loadYouTubeBGM() {
+  const url = document.getElementById('bgmUrl')?.value.trim();
+  const videoId = extractYouTubeId(url);
+  const status = document.getElementById('bgmStatus');
+
+  if (!videoId) {
+    if (status) status.textContent = '⚠️ 올바른 유튜브 링크를 입력해 주세요';
+    return;
+  }
+
+  const wrap = document.getElementById('ytPlayerWrap');
+  if (wrap) wrap.style.display = 'block';
+
+  if (!ytPlayer) {
+    loadYouTubeAPI();
+    ytPendingVideoId = videoId;
+    if (status) status.textContent = '⏳ 플레이어 로딩 중...';
+    return;
+  }
+
+  if (ytPlayerReady) {
+    ytPlayer.loadVideoById(videoId);
+    if (status) status.textContent = '▶ 재생 중';
+  } else {
+    ytPendingVideoId = videoId;
+    if (status) status.textContent = '⏳ 플레이어 준비 중...';
+  }
+}
+
+function ytBGMPlay()  { if (ytPlayer && ytPlayerReady) ytPlayer.playVideo(); }
+function ytBGMPause() { if (ytPlayer && ytPlayerReady) { ytPlayer.pauseVideo(); document.getElementById('bgmStatus').textContent='⏸ 일시정지'; } }
+function ytBGMStop()  { if (ytPlayer && ytPlayerReady) { ytPlayer.stopVideo(); document.getElementById('bgmStatus').textContent='⏹ 정지됨'; } }
+function ytBGMVolume(v) {
+  if (ytPlayer && ytPlayerReady) ytPlayer.setVolume(parseInt(v));
+  const lbl = document.getElementById('bgmVolLabel');
+  if (lbl) lbl.textContent = v + '%';
+}
+
+// 트랙 저장/불러오기 (localStorage)
+function loadBGMSavedTracks() {
+  try { bgmSavedTracks = JSON.parse(localStorage.getItem('actively_bgm_tracks') || '[]'); } catch(e) { bgmSavedTracks = []; }
+}
+function saveBGMTracks() {
+  try { localStorage.setItem('actively_bgm_tracks', JSON.stringify(bgmSavedTracks)); } catch(e) {}
+}
+function saveBGMTrack() {
+  const url = document.getElementById('bgmUrl')?.value.trim();
+  if (!url || !extractYouTubeId(url)) {
+    document.getElementById('bgmStatus').textContent = '⚠️ 재생 중인 유튜브 링크가 없어요';
+    return;
+  }
+  const name = prompt('트랙 이름을 입력하세요', '트랙 ' + (bgmSavedTracks.length + 1));
+  if (!name) return;
+  bgmSavedTracks.unshift({ name, url, addedAt: Date.now() });
+  if (bgmSavedTracks.length > 20) bgmSavedTracks.pop();
+  saveBGMTracks();
+  renderBGMSavedList();
+}
+function deleteBGMTrack(idx) {
+  bgmSavedTracks.splice(idx, 1);
+  saveBGMTracks();
+  renderBGMSavedList();
+}
+function playBGMSavedTrack(idx) {
+  const t = bgmSavedTracks[idx];
+  if (!t) return;
+  const input = document.getElementById('bgmUrl');
+  if (input) input.value = t.url;
+  loadYouTubeBGM();
+}
+function renderBGMSavedList() {
+  const list = document.getElementById('bgmSavedList');
+  const empty = document.getElementById('bgmSavedEmpty');
+  if (!list) return;
+  if (!bgmSavedTracks.length) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = bgmSavedTracks.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--off);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.name)}</div>
+        <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${escapeHtml(t.url)}</div>
+      </div>
+      <button onclick="playBGMSavedTrack(${i})" style="padding:7px 12px;border-radius:8px;border:none;background:var(--theme-g);color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">▶ 재생</button>
+      <button onclick="deleteBGMTrack(${i})" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:800;cursor:pointer;color:var(--muted);">✕</button>
+    </div>
+  `).join('');
+}
 function initBGMPresets() {
-  const el=document.getElementById('bgmPresets'); if(!el||el.dataset.init) return;
-  el.dataset.init='1';
-  renderBGMPresets();
+  loadBGMSavedTracks();
+  renderBGMSavedList();
+  loadYouTubeAPI();
 }
 
-function renderBGMPresets() {
-  const el=document.getElementById('bgmPresets'); if(!el) return;
-  const keys = Object.keys(bgmPool);
-  el.innerHTML = keys.map((key,ki)=>{
-    const g=bgmPool[key];
-    const active=bgmCurrentGenre===key;
-    return '<button onclick="selectBGMGenre('+ki+')" ' +
-      'style="width:100%;text-align:left;padding:10px 14px;border-radius:10px;border:1.5px solid ' +
-      (active?'var(--theme-a)':'var(--border)') + ';background:' +
-      (active?'var(--theme-l)':'var(--off)') +
-      ';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text);display:flex;justify-content:space-between;align-items:center;">' +
-      '<span>'+g.label+'</span>' +
-      '<span style="font-size:11px;color:var(--muted);font-weight:600;">'+g.tracks.length+'곡 · 랜덤</span></button>';
-  }).join('');
-}
+// 하위 호환: 기존 코드에서 playBGM / pauseBGM / stopBGM / setBGMVolume 호출될 수 있으므로 래퍼 유지
+function playBGM()  { loadYouTubeBGM(); }
+function pauseBGM() { ytBGMPause(); }
+function stopBGM()  { ytBGMStop(); }
+function setBGMVolume(v) { ytBGMVolume(Math.round(parseFloat(v) * 100)); }
 
-function selectBGMGenre(idx) {
-  const key = Object.keys(bgmPool)[idx];
-  const genre = bgmPool[key]; if(!genre) return;
-  bgmCurrentGenre = key;
-  const randomTrack = genre.tracks[Math.floor(Math.random()*genre.tracks.length)];
-  const input=document.getElementById('bgmUrl'); if(input) input.value=randomTrack;
-  renderBGMPresets();
-  playBGM();
-  document.getElementById('bgmStatus').textContent='▶ '+genre.label+' 재생 중 (랜덤 선택)';
-}
-
-function playBGM() {
-  const url=document.getElementById('bgmUrl')?.value.trim();
-  if(!url){ document.getElementById('bgmStatus').textContent='⚠️ URL을 입력해 주세요'; return; }
-  const player=document.getElementById('bgmPlayer');
-  if(!player) return;
-  player.src=url;
-  player.volume=parseFloat(document.getElementById('bgmVolume')?.value||0.5);
-
-  // ✅ 곡 종료 시 같은 장르 내 다음 트랙 자동 재생
-  player.onended = () => {
-    if (bgmCurrentGenre && bgmPool[bgmCurrentGenre]) {
-      const tracks = bgmPool[bgmCurrentGenre].tracks;
-      const currentIdx = tracks.indexOf(player.src);
-      const nextIdx = (currentIdx + 1) % tracks.length;
-      const nextUrl = tracks[nextIdx];
-      const input = document.getElementById('bgmUrl');
-      if (input) input.value = nextUrl;
-      player.src = nextUrl;
-      player.play().catch(()=>{});
-      document.getElementById('bgmStatus').textContent = '▶ 다음 트랙 재생 중 (' + (nextIdx+1) + '/' + tracks.length + ')';
-    }
-  };
-
-  player.play().then(()=>{
-    document.getElementById('bgmStatus').textContent='▶ 재생 중';
-  }).catch(e=>{
-    document.getElementById('bgmStatus').textContent='❌ 재생 실패 — 직접 링크 URL인지 확인해 주세요';
-  });
-}
-function pauseBGM() {
-  document.getElementById('bgmPlayer')?.pause();
-  document.getElementById('bgmStatus').textContent='⏸ 일시정지';
-}
-function stopBGM() {
-  const p=document.getElementById('bgmPlayer');
-  if(p){p.pause();p.currentTime=0;}
-  document.getElementById('bgmStatus').textContent='⏹ 정지됨';
-}
-function setBGMVolume(v) {
-  const p=document.getElementById('bgmPlayer');
-  if(p) p.volume=parseFloat(v);
-}
 
 function updateParticipantView(act) {
   const pTitle = document.getElementById('pTitle');
@@ -3697,17 +3731,7 @@ function setTopTitle(t){
   const banner = document.getElementById('hostTitleBanner');
   const title = (t||'').toString().trim();
   if(el) el.textContent = title;
-
-  // ✅ 날짜·대상 메타 배지 렌더
-  const metaBanner = document.getElementById('sessionMetaBanner');
-  if (metaBanner) {
-    const badges = [];
-    if (sessionDate) badges.push(`<span style="font-size:11px;font-weight:800;color:var(--theme-a);background:rgba(255,255,255,0.6);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:3px 10px;">📅 ${sessionDate}</span>`);
-    if (sessionAudience) badges.push(`<span style="font-size:11px;font-weight:800;color:var(--theme-a);background:rgba(255,255,255,0.6);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:3px 10px;">👥 ${escapeHtml(sessionAudience)}</span>`);
-    metaBanner.innerHTML = badges.join('');
-  }
-
-  if(banner) banner.style.display = (title || sessionDate || sessionAudience) ? 'flex' : 'none';
+  if(banner) banner.style.display = title ? 'flex' : 'none';
 }
 
 /* Hook: when host session loads from DB, set title */
@@ -3741,8 +3765,7 @@ async function submitQuickQA(){
   const txt = (input?.value||'').trim();
   if(!txt){ alert('질문을 입력해 주세요.'); return; }
   const nickToSend = anon ? '익명' : (nickname || '익명');
-  // ✅ author 필드로 통일 (submitParticipantQA와 동일)
-  const payload = { q: txt, author: nickToSend, ts: Date.now(), votes: 0, answered: false };
+  const payload = { q: txt, nick: nickToSend, ts: Date.now(), votes: 0 };
 
   if(!FIREBASE_READY || !db){
     // Demo/offline fallback: store locally so user doesn't feel blocked
@@ -3803,13 +3826,21 @@ function selectCtx(c) {
   if (hint) hint.textContent = hints[c] || '';
 }
 
+// 날짜 입력칸 오늘 날짜 기본값 설정
+(function setDefaultDate() {
+  const d = document.getElementById('sessionDateInput');
+  if (d) d.value = new Date().toISOString().slice(0, 10);
+})();
+
 // ── 새 세션 만들기 ──
 function createNewSession() {
   const title = (document.getElementById('sessionTitleInput')?.value || '').trim();
-  const date = (document.getElementById('sessionDateInput')?.value || '').trim();
+  const date  = (document.getElementById('sessionDateInput')?.value || '').trim();
   const audience = (document.getElementById('sessionAudienceInput')?.value || '').trim();
-  // ✅ PIN 인증 후 세션 시작 — 날짜·대상 함께 전달
-  showAdminPinOverlay([ctx || 'edu', 'poll', title, date, audience]);
+  const parts = [title, date, audience].filter(Boolean);
+  const fullTitle = parts.join(' | ') || '';
+  // PIN 인증 후 세션 시작
+  showAdminPinOverlay([ctx || 'edu', 'poll', fullTitle]);
 }
 
 // ── 링크 복사 ──
@@ -3856,10 +3887,7 @@ function renderLocalHistory() {
     '<div style="font-size:22px;">' + (s.ctxIcon || '📊') + '</div>' +
     '<div class="hist-meta">' +
     '<div class="hist-code">' + escapeHtml(s.title || s.code || '세션') + '</div>' +
-    '<div class="hist-time">' + escapeHtml(s.code || '') + ' · ' + (s.time || '') +
-    (s.date ? ' · 📅 ' + escapeHtml(s.date) : '') +
-    (s.audience ? ' · 👥 ' + escapeHtml(s.audience) : '') +
-    '</div></div>' +
+    '<div class="hist-time">' + escapeHtml(s.code || '') + ' · ' + (s.time || '') + '</div></div>' +
     '<div class="hist-actions">' +
     '<button class="small-btn" onclick="resumeSession(\'' + s.code + '\',\'' + (s.ctx||'edu') + '\')">▶ 재개</button>' +
     '<button class="small-btn danger" onclick="deleteLocalSession(' + (sessions.length-1-i) + ')">삭제</button>' +
@@ -3873,8 +3901,6 @@ function saveSessionToLocal(code, c, title) {
   const ctxIcons = { edu:'🎓', biz:'💼', evt:'🎉' };
   sessions.push({
     code, ctx: c, title: title || code,
-    date: sessionDate || '',
-    audience: sessionAudience || '',
     ctxIcon: ctxIcons[c] || '📊',
     time: new Date().toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
   });
@@ -4094,8 +4120,8 @@ async function verifyAdminPin() {
 
   // 대기 중이던 startAsHost 실행
   if (args) {
-    const [c, act, title, date, audience] = args;
-    startAsHost(c, act, title, date, audience);
+    const [c, act, title] = args;
+    startAsHost(c, act, title);
   }
 }
 
@@ -4134,8 +4160,8 @@ async function saveNewAdminPin() {
     _pendingHostArgs = null;
     closeAdminPinOverlay();
     if (args) {
-      const [c, act, title, date, audience] = args;
-      startAsHost(c, act, title, date, audience);
+      const [c, act, title] = args;
+      startAsHost(c, act, title);
     } else {
       alert('✅ PIN이 저장됐어요! 다음부터 이 PIN으로 로그인하세요.');
     }
@@ -4176,13 +4202,8 @@ async function submitParticipantSlider() {
 // ── 참여자 만족도 제출 ──
 async function submitParticipantRating() {
   if (!pSelectedRating) { alert('별점을 선택해 주세요.'); return; }
-  // ✅ 중복 응답 방지
-  const id = activeRatingId || 'r1';
-  const ratingKey = `_ratingSubmitted_${id}`;
-  if (window[ratingKey]) { alert('이미 이 문항에 응답하셨어요!'); return; }
-  window[ratingKey] = true;
-
   if (db && roomCode) {
+    const id = activeRatingId || 'r1';
     await db.ref(`sessions/${roomCode}/ratingVotes/${id}`).transaction(arr => {
       const a = Array.isArray(arr) ? arr : [];
       return a.concat([pSelectedRating]);
@@ -4201,12 +4222,6 @@ document.addEventListener('DOMContentLoaded', () => {
   style.textContent = '.btn-primary{padding:10px 18px;border-radius:10px;border:none;background:var(--theme-g);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}.btn-primary:hover{opacity:0.9;}.btn-primary:disabled{opacity:0.4;cursor:not-allowed;}';
   document.head.appendChild(style);
 
-  // ✅ 날짜 기본값: 오늘
-  const dateInput = document.getElementById('sessionDateInput');
-  if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().slice(0, 10);
-  }
-
   // 로컬 히스토리 렌더
   renderLocalHistory();
 
@@ -4215,50 +4230,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const joinCode = params.get('join');
   if (joinCode) {
     showScreen('participant');
-
-    // ✅ Firebase 연결 대기 후 재시도 로직으로 "코드를 찾을 수 없습니다" 오류 수정
-    async function tryJoinWithRetry(code, maxRetries, delayMs) {
-      maxRetries = maxRetries || 5;
-      delayMs = delayMs || 800;
-
-      if (!db) {
-        showScreen('landing');
-        alert('Firebase가 연결되지 않아 세션에 참여할 수 없어요.');
-        return;
-      }
-
-      // Firebase 실제 연결 확인 (최대 4초 대기)
-      for (var ri = 0; ri < 5; ri++) {
-        try {
-          var connSnap = await db.ref('.info/connected').once('value');
-          if (connSnap.val() === true) break;
-        } catch(e) {}
-        await new Promise(function(r){ setTimeout(r, 600); });
-      }
-
-      // 세션 조회 재시도 (최대 5회)
-      var ok = false;
-      for (var attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          ok = await joinSessionFirebase(code.toUpperCase());
-          if (ok) break;
-        } catch(e) { console.warn('[ACTIVELY] join attempt', attempt+1, e); }
-        if (attempt < maxRetries - 1) await new Promise(function(r){ setTimeout(r, delayMs); });
-      }
-
+    // 자동으로 참여 시도
+    (async () => {
+      const ok = await joinSessionFirebase(joinCode.toUpperCase());
       if (ok) {
         setTheme(ctx);
-        var ctxLabel = document.getElementById('pContextLabel');
-        if (ctxLabel) ctxLabel.textContent = ctxConfig[ctx] ? ctxConfig[ctx].label : '세션';
+        const ctxLabel = document.getElementById('pContextLabel');
+        if (ctxLabel) ctxLabel.textContent = ctxConfig[ctx]?.label || '세션';
       } else {
         showScreen('landing');
-        var codeInput = document.getElementById('joinCodeInput');
-        if (codeInput) codeInput.value = code.toUpperCase();
-        alert('세션을 찾을 수 없어요.\n세션이 아직 시작되지 않았거나 코드가 만료됐을 수 있습니다.\n잠시 후 다시 시도해 주세요.');
+        alert('세션을 찾을 수 없어요. 코드를 다시 확인해 주세요.');
       }
-    }
-
-    tryJoinWithRetry(joinCode);
+    })();
   }
 
   // 세션 저장 훅 — startAsHost 이후에도 실행되도록 감싸기
