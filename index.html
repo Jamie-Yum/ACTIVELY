@@ -3119,6 +3119,14 @@ function renderRatingEditList() {
   const box = document.getElementById('ratingEditList');
   if (!box) return;
 
+  // 현재 DOM에 입력된 값들을 먼저 저장 (초기화 방지)
+  const savedInputs = {};
+  Object.keys(ratingItemsById || {}).forEach(id => {
+    const titleEl = document.getElementById(`rating-title-${id}`);
+    const iconEl = document.getElementById(`rating-icon-${id}`);
+    if (titleEl) savedInputs[id] = { title: titleEl.value, icon: iconEl ? iconEl.value : null };
+  });
+
   const ids = Object.keys(ratingItemsById || {});
   if (!ids.length) {
     box.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:10px 0;">아직 문항이 없어요. 아래에서 추가해 주세요.</div>`;
@@ -3127,8 +3135,10 @@ function renderRatingEditList() {
 
   box.innerHTML = ids.map((id, idx) => {
     const it = ratingItemsById[id] || {};
-    const title = escapeHtml(it.title || `문항 ${idx+1}`);
-    const icon = it.icon || 'star';
+    // DOM에 사용자가 입력한 값이 있으면 그 값을 우선 사용
+    const savedVal = savedInputs[id];
+    const title = escapeHtml(savedVal ? savedVal.title : (it.title || `문항 ${idx+1}`));
+    const icon = (savedVal && savedVal.icon) ? savedVal.icon : (it.icon || 'star');
     const isActive = id === activeRatingId;
 
     const opts = Object.keys(ratingIconSets).map(k =>
