@@ -3125,42 +3125,93 @@ function renderRatingEditList() {
     return;
   }
 
-  box.innerHTML = ids.map((id, idx) => {
+  // ── 현재 포커스된 input id 기억 ──
+  const focusedId = document.activeElement?.id || null;
+
+  // ── 기존 input 값 보존 ──
+  const savedTitles = {};
+  ids.forEach(id => {
+    const el = document.getElementById(`rating-title-${id}`);
+    if (el) savedTitles[id] = el.value;
+  });
+
+  // ── 없어진 카드 제거 ──
+  const existingCards = box.querySelectorAll('[data-rating-card]');
+  existingCards.forEach(card => {
+    if (!ids.includes(card.dataset.ratingCard)) card.remove();
+  });
+
+  ids.forEach((id, idx) => {
     const it = ratingItemsById[id] || {};
-    const title = escapeHtml(it.title || `문항 ${idx+1}`);
     const icon = it.icon || 'star';
     const isActive = id === activeRatingId;
+    // 제목: input에 값이 보존된 경우 우선 사용 (타이핑 중 보호)
+    const titleVal = savedTitles[id] !== undefined ? savedTitles[id] : (it.title || `문항 ${idx+1}`);
+    const title = escapeHtml(titleVal);
 
-    const opts = Object.keys(ratingIconSets).map(k =>
-      `<option value="${k}" ${k===icon?'selected':''}>${ratingIconSets[k].label}</option>`
-    ).join('');
+    const existingCard = box.querySelector(`[data-rating-card="${id}"]`);
 
-    return `
-      <div class="card" style="border-radius:14px;border:1px solid var(--border);background:var(--white);margin-bottom:10px;">
+    if (existingCard) {
+      // ── 카드 이미 존재: 버튼 상태만 업데이트 (input 건드리지 않음) ──
+      const launchBtn = existingCard.querySelector('[data-launch-btn]');
+      if (launchBtn) {
+        launchBtn.className = `btn-sm ${isActive ? 'btn-primary-theme' : 'btn-ghost'}`;
+        launchBtn.textContent = isActive ? '✅ 전송됨' : '📢 전송';
+      }
+      // 응답 수 배지만 업데이트
+      const respBadge = existingCard.querySelector('[data-resp-badge]');
+      if (respBadge) respBadge.textContent = `${(ratingVotesById[id]||[]).length}명 응답`;
+
+      // 아이콘 배지
+      const iconBadge = existingCard.querySelector('[data-icon-badge]');
+      if (iconBadge) iconBadge.textContent = `${iconGlyph(icon)} 아이콘`;
+
+      // 카드 테두리 (active 여부)
+      existingCard.style.border = isActive ? '1.5px solid var(--theme-a)' : '1px solid var(--border)';
+    } else {
+      // ── 새 카드 생성 ──
+      const opts = Object.keys(ratingIconSets).map(k =>
+        `<option value="${k}" ${k===icon?'selected':''}>${ratingIconSets[k].label}</option>`
+      ).join('');
+
+      const div = document.createElement('div');
+      div.dataset.ratingCard = id;
+      div.className = 'card';
+      div.style.cssText = `border-radius:14px;border:${isActive?'1.5px solid var(--theme-a)':'1px solid var(--border)'};background:var(--white);margin-bottom:10px;`;
+      div.innerHTML = `
         <div class="card-body" style="padding:14px;">
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <input class="form-input" id="rating-title-${id}" value="${title}" placeholder="예: 오늘 강의는 어땠나요?" style="flex:1;min-width:220px;">
-            <select class="form-input" id="rating-icon-${id}" style="width:160px;min-width:160px;">
-              ${opts}
-            </select>
-
-            <button class="btn-sm ${isActive ? 'btn-primary-theme' : 'btn-ghost'}" onclick="launchRating('${id}')">
-              ${isActive ? '✅ 전송됨' : '📢 전송'}
-            </button>
+            <select class="form-input" id="rating-icon-${id}" style="width:160px;min-width:160px;">${opts}</select>
+            <button class="btn-sm ${isActive ? 'btn-primary-theme' : 'btn-ghost'}" data-launch-btn onclick="launchRating('${id}')">${isActive ? '✅ 전송됨' : '📢 전송'}</button>
             <button class="btn-sm btn-ghost" onclick="saveRatingItem('${id}')">💾 저장</button>
             <button class="btn-sm btn-ghost" onclick="duplicateRatingItem('${id}')">⎘ 복제</button>
             <button class="btn-sm btn-ghost" onclick="removeRatingItem('${id}')" style="border-color:#ffb3b3;color:#b10000;background:#fff;">삭제</button>
           </div>
           <div style="margin-top:8px;font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="badge">${iconGlyph(icon)} 아이콘</span>
-            <span class="badge">${(ratingVotesById[id]||[]).length}명 응답</span>
+            <span class="badge" data-icon-badge>${iconGlyph(icon)} 아이콘</span>
+            <span class="badge" data-resp-badge>${(ratingVotesById[id]||[]).length}명 응답</span>
           </div>
         </div>
-      </div>
-    `;
-  }).join('');
+      `;
+      box.appendChild(div);
+    }
+  });
 
-  // 미리보기
+  // 카드 순서를 ids 순서와 맞춤
+  ids.forEach((id, idx) => {
+    const card = box.querySelector(`[data-rating-card="${id}"]`);
+    if (card && box.children[idx] !== card) box.insertBefore(card, box.children[idx] || null);
+  });
+
+  // 포커스 복원
+  if (focusedId) {
+    const el = document.getElementById(focusedId);
+    if (el && document.activeElement !== el) {
+      try { el.focus(); } catch(e) {}
+    }
+  }
+
   updateRatingPreview();
 }
 
