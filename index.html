@@ -202,256 +202,95 @@ input, textarea { font-family: inherit; }
 /* ============================================================
    LANDING SCREEN
 ============================================================ */
-/* ═══════════════════════════════════════
-   TOSS-STYLE LANDING REDESIGN
-═══════════════════════════════════════ */
 #screen-landing {
-  background: var(--off);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  background: var(--surface-card);
   align-items: stretch;
 }
 
-/* 상단 헤더 */
-.land-header {
-  position: sticky; top: 0; z-index: 50;
-  background: var(--off);
-  border-bottom: 1px solid var(--border);
-  padding: 0 20px;
-  height: 56px;
-  display: flex; align-items: center; justify-content: space-between;
-  backdrop-filter: blur(12px);
-}
-.land-logo {
-  font-size: 17px; font-weight: 900; letter-spacing: -0.5px;
-  color: var(--text);
-}
-.land-mode-group {
-  display: flex; gap: 2px;
-  background: var(--surface-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 3px;
-}
-.land-mode-btn {
-  border: none; background: transparent;
-  border-radius: 7px; padding: 5px 9px;
-  font-size: 14px; cursor: pointer;
-  transition: all 0.15s;
-}
-.land-mode-btn.active { background: var(--theme-a); }
-
-/* 스크롤 컨테이너 */
-.land-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px 20px 48px;
-  max-width: 480px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
+.landing-hero {
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  padding: 64px 60px 56px;
+  position: relative;
+  overflow: hidden;
 }
 
-/* 인삿말 */
-.land-greet {
-  display: flex; align-items: center; gap: 14px;
-  margin-bottom: 24px;
-}
-.land-greet-emoji {
-  font-size: 40px; line-height: 1;
-  animation: wave 1.5s ease-in-out;
-  transform-origin: 70% 70%;
-}
-@keyframes wave {
-  0%,100%{transform:rotate(0deg)} 20%{transform:rotate(-15deg)} 40%{transform:rotate(12deg)} 60%{transform:rotate(-10deg)} 80%{transform:rotate(8deg)}
-}
-.land-greet-title {
-  font-size: 22px; font-weight: 900; letter-spacing: -0.5px;
-  color: var(--text); margin-bottom: 4px;
-}
-.land-greet-sub {
-  font-size: 13px; color: var(--muted); font-weight: 600;
-  line-height: 1.5;
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.03);
+  top: -200px; right: -100px;
+  pointer-events: none;
 }
 
-/* 컨셉 그리드 */
-.concept-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+.landing-hero::after {
+  content: '';
+  position: absolute;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.03);
+  bottom: -150px; left: 20%;
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
   margin-bottom: 20px;
 }
-.concept-card {
-  position: relative;
-  background: var(--surface-card);
-  border: 2px solid var(--border);
-  border-radius: 18px;
-  padding: 0;
-  cursor: pointer;
-  font-family: var(--font);
-  text-align: left;
-  transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
-  overflow: hidden;
-  display: flex; flex-direction: column;
-}
-.concept-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
-.concept-card.active {
-  border-color: var(--theme-a);
-  box-shadow: 0 0 0 3px var(--theme-l), 0 8px 24px rgba(0,0,0,0.10);
-  transform: translateY(-2px);
+
+.hero-title {
+  font-family: var(--font); font-weight: 800;
+  font-size: clamp(38px, 5vw, 64px);
+  line-height: 1.1;
+  margin-bottom: 20px;
+  max-width: 600px;
+  color: #ffffff;
 }
 
-/* 컨셉 미리보기 그래픽 */
-.concept-preview {
-  padding: 14px 12px 10px;
-  display: flex; flex-direction: column; gap: 5px;
-  min-height: 80px;
-  position: relative;
-}
-.concept-preview-edu { background: linear-gradient(135deg, #e8f5ee 0%, #d1ead8 100%); }
-.concept-preview-biz { background: linear-gradient(135deg, #eef1fb 0%, #d8e0f8 100%); }
-.concept-preview-evt { background: linear-gradient(135deg, #fbeef5 0%, #f5d8e8 100%); }
-body.ui-dark .concept-preview-edu { background: linear-gradient(135deg, rgba(45,122,90,0.2), rgba(45,122,90,0.08)); }
-body.ui-dark .concept-preview-biz { background: linear-gradient(135deg, rgba(43,75,191,0.2), rgba(43,75,191,0.08)); }
-body.ui-dark .concept-preview-evt { background: linear-gradient(135deg, rgba(194,51,122,0.2), rgba(194,51,122,0.08)); }
-
-.cp-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  display: inline-block; margin-right: 3px;
-  position: absolute; top: 12px;
-}
-.cp-dot:nth-child(1) { left: 12px; }
-.cp-dot:nth-child(2) { left: 24px; }
-.cp-dot:nth-child(3) { left: 36px; }
-.concept-preview-edu .cp-dot { background: #2d7a5a; }
-.concept-preview-biz .cp-dot { background: #2b4bbf; }
-.concept-preview-evt .cp-dot { background: #c2337a; }
-.cp-bar {
-  height: 6px; border-radius: 100px;
-  margin-top: 2px;
-}
-.cp-bar:nth-child(4) { margin-top: 26px; }
-.concept-preview-edu .cp-bar { background: rgba(45,122,90,0.35); }
-.concept-preview-biz .cp-bar { background: rgba(43,75,191,0.35); }
-.concept-preview-evt .cp-bar { background: rgba(194,51,122,0.35); }
-
-/* 컨셉 정보 */
-.concept-info {
-  padding: 10px 12px 12px;
-  flex: 1;
-}
-.concept-icon { font-size: 18px; margin-bottom: 4px; }
-.concept-name { font-size: 13px; font-weight: 900; color: var(--text); margin-bottom: 3px; letter-spacing: -0.3px; }
-.concept-desc { font-size: 11px; color: var(--muted); font-weight: 600; line-height: 1.4; }
-
-/* 체크 뱃지 */
-.concept-check {
-  position: absolute; top: 10px; right: 10px;
-  width: 22px; height: 22px; border-radius: 50%;
-  background: var(--theme-a); color: #fff;
-  font-size: 12px; font-weight: 900;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(0.5);
-  transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
-}
-.concept-card.active .concept-check { opacity: 1; transform: scale(1); }
-
-/* 공통 카드 */
-.land-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 14px;
-}
-.land-card-title {
-  font-size: 16px; font-weight: 900; color: var(--text);
-  letter-spacing: -0.3px; margin-bottom: 16px;
+.hero-title em {
+  font-style: normal;
+  opacity: 0.6;
 }
 
-/* 입력 필드 */
-.land-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.land-label { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: 0.2px; }
-.land-input {
-  width: 100%; box-sizing: border-box;
-  padding: 13px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--off);
-  font-family: var(--font); font-weight: 700; font-size: 14px;
-  color: var(--text); outline: none;
-  transition: border-color 0.2s, background 0.2s;
-}
-.land-input:focus { border-color: var(--theme-a); background: var(--white); }
-.land-input::placeholder { color: var(--muted2); font-weight: 600; }
-
-/* 시작 버튼 */
-.land-primary-btn {
-  width: 100%; margin-top: 6px;
-  padding: 16px;
-  border: none; border-radius: 14px;
-  background: var(--theme-g);
-  color: #fff; font-family: var(--font); font-size: 16px; font-weight: 900;
-  cursor: pointer; letter-spacing: -0.3px;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: all 0.2s; box-shadow: 0 4px 14px rgba(0,0,0,0.15);
-}
-.land-primary-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
-.land-primary-btn:active { transform: translateY(0); }
-
-/* 참여 카드 */
-.land-join-card { background: var(--theme-l); border-color: transparent; }
-.land-join-row { display: flex; gap: 8px; align-items: center; }
-.land-join-btn {
-  padding: 13px 18px; border: none; border-radius: 12px;
-  background: var(--theme-a); color: #fff;
-  font-family: var(--font); font-size: 14px; font-weight: 900;
-  cursor: pointer; white-space: nowrap;
-  transition: all 0.15s;
-}
-.land-join-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-
-/* 히스토리 아이템 재정의 */
-.history-list { display: flex; flex-direction: column; gap: 8px; }
-.hist-item {
-  background: var(--off);
-  border: 1px solid var(--border);
-  border-radius: 14px; padding: 12px 14px;
-  display: flex; gap: 10px; align-items: center;
-  transition: all 0.15s;
-}
-.hist-item:hover { border-color: var(--theme-a); background: var(--theme-l); }
-.hist-meta { flex: 1; min-width: 0; }
-.hist-code { font-weight: 900; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hist-time { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 600; }
-.hist-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.small-btn {
-  border: 1px solid var(--border); background: var(--surface-card);
-  border-radius: 10px; padding: 7px 10px;
-  font-weight: 800; cursor: pointer; font-family: var(--font); font-size: 12px;
-  color: var(--text); transition: all 0.15s;
-}
-.small-btn:hover { border-color: var(--theme-a); color: var(--theme-a); }
-.small-btn.primary { background: var(--theme-g); color: #fff; border-color: transparent; }
-.small-btn.primary:hover { opacity: 0.9; color: #fff; }
-.small-btn.danger { border-color: #ffb3b3; color: #c0392b; background: #fff5f5; }
-.small-btn.danger:hover { background: #ffe0e0; }
-
-/* 반응형 */
-@media (max-width: 400px) {
-  .concept-grid { grid-template-columns: 1fr; }
-  .concept-card { flex-direction: row; }
-  .concept-preview { width: 90px; min-width: 90px; min-height: 70px; }
-}
-@media (min-width: 600px) {
-  .land-scroll { padding: 32px 32px 48px; max-width: 560px; }
-  .concept-name { font-size: 14px; }
+.hero-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,0.55);
+  max-width: 460px;
+  line-height: 1.7;
+  margin-bottom: 40px;
 }
 
-/* 이전 hero 클래스들 - 호환성 유지 */
-.landing-hero { display: none; }
-.landing-body { display: none; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.btn-hero-primary {
+  background: var(--white);
+  color: var(--text);
+  border: none;
+  padding: 14px 28px;
+  border-radius: 100px;
+  font-size: 14px; font-weight: 600;
+  letter-spacing: -0.2px;
+  transition: all 0.2s;
+}
+.btn-hero-primary:hover { background: var(--off2); transform: translateY(-1px); }
+
+.btn-hero-secondary {
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 14px 28px;
+  border-radius: 100px;
+  font-size: 14px; font-weight: 500;
+  transition: all 0.2s;
+}
+.btn-hero-secondary:hover { border-color: rgba(255,255,255,0.5); color: var(--white); }
+
+.landing-body { padding: 56px 60px; flex: 1; }
 
 .section-label {
   font-size: 11px; font-weight: 600;
@@ -1212,10 +1051,6 @@ body.ui-dark .up-btn { background: #1a1a2c; }
 body.ui-dark .mark-answered-btn { background: #1a1a2c; }
 body.ui-dark .landing-body { background: var(--off); }
 body.ui-dark #screen-landing { background: var(--off); }
-body.ui-dark .land-header { background: var(--off); }
-body.ui-dark .land-card { background: var(--surface-card); }
-body.ui-dark .land-input { background: var(--off2); }
-body.ui-vivid .land-primary-btn { box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
 body.ui-dark .ui-sw-btn.active { background: #2a2a40; }
 
 /* ============================================================
@@ -1465,124 +1300,57 @@ body.ui-dark #screen-participant { background: var(--off); }
 ============================================================ -->
 <div id="screen-landing" class="screen active">
 
-  <!-- ── 토스 스타일 상단 바 ── -->
-  <header class="land-header">
-    <span class="land-logo">ACTIVELY</span>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div class="land-mode-group">
-        <button class="land-mode-btn active" id="land-sw-light" onclick="setUiMode('light')">☀️</button>
-        <button class="land-mode-btn" id="land-sw-dark" onclick="setUiMode('dark')">🌙</button>
-        <button class="land-mode-btn" id="land-sw-vivid" onclick="setUiMode('vivid')">🎨</button>
+  <div class="landing-hero">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px">
+      <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px">ACTIVELY</div>
+      <div class="ui-switcher" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.15)">
+        <button class="ui-sw-btn active" id="land-sw-light" onclick="setUiMode('light')" title="라이트" style="color:#fff">☀️</button>
+        <button class="ui-sw-btn" id="land-sw-dark" onclick="setUiMode('dark')" title="다크" style="color:#fff">🌙</button>
+        <button class="ui-sw-btn" id="land-sw-vivid" onclick="setUiMode('vivid')" title="비비드" style="color:#fff">🎨</button>
       </div>
     </div>
-  </header>
+    <div class="hero-eyebrow">실시간 청중 참여 플랫폼</div>
+    <h1 class="hero-title">청중을 대화의<br><em>중심</em>으로</h1>
+    <p class="hero-sub">강의, 회의, 이벤트 어디서나. 투표·워드클라우드·Q&A·퀴즈로 청중과 실시간으로 소통하세요.</p>
+    
+  </div>
 
-  <!-- ── 메인 스크롤 영역 ── -->
-  <div class="land-scroll">
-
-    <!-- ── 인삿말 ── -->
-    <div class="land-greet">
-      <div class="land-greet-emoji">👋</div>
-      <div>
-        <div class="land-greet-title">어떤 자리인가요?</div>
-        <div class="land-greet-sub">분위기에 맞는 컨셉을 고르면<br>참여자 화면도 똑같이 적용돼요</div>
-      </div>
-    </div>
-
-    <!-- ── 디자인 컨셉 카드 ── -->
-    <div class="concept-grid" id="conceptGrid">
-
-      <button class="concept-card active" id="concept-edu" onclick="selectConcept('edu',this)">
-        <div class="concept-preview concept-preview-edu">
-          <div class="cp-dot"></div><div class="cp-dot"></div><div class="cp-dot"></div>
-          <div class="cp-bar" style="width:80%"></div>
-          <div class="cp-bar" style="width:55%"></div>
-          <div class="cp-bar" style="width:70%"></div>
+  
+<div class="landing-body">
+  <div class="section-label">새 세션</div>
+  <div class="new-session-card">
+    <div class="new-session-left">
+      <div class="new-session-head">세션 정보</div>
+      <div style="margin-top:16px;display:grid;gap:14px;">
+        <div>
+          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:7px;">📌 세션 제목</div>
+          <input id="sessionTitleInput" placeholder="예: 2월 SE 교육 / 팀 주간회의" style="width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;font-size:16px;outline:none;color:var(--text);transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--theme-a)'" onblur="this.style.borderColor='var(--border)'" />
         </div>
-        <div class="concept-info">
-          <div class="concept-icon">🎓</div>
-          <div class="concept-name">강의 · 교육</div>
-          <div class="concept-desc">차분하고 집중되는<br>초록 계열</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:7px;">📅 날짜</div>
+            <input id="sessionDateInput" type="date" style="width:100%;padding:13px 14px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;font-size:14px;outline:none;color:var(--text);transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--theme-a)'" onblur="this.style.borderColor='var(--border)'" />
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:7px;">👥 대상</div>
+            <input id="sessionAudienceInput" placeholder="예: 마케팅팀, 신입사원" style="width:100%;padding:13px 14px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:700;font-size:14px;outline:none;color:var(--text);transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--theme-a)'" onblur="this.style.borderColor='var(--border)'" />
+          </div>
         </div>
-        <div class="concept-check">✓</div>
-      </button>
-
-      <button class="concept-card" id="concept-biz" onclick="selectConcept('biz',this)">
-        <div class="concept-preview concept-preview-biz">
-          <div class="cp-dot"></div><div class="cp-dot"></div><div class="cp-dot"></div>
-          <div class="cp-bar" style="width:90%"></div>
-          <div class="cp-bar" style="width:60%"></div>
-          <div class="cp-bar" style="width:75%"></div>
-        </div>
-        <div class="concept-info">
-          <div class="concept-icon">💼</div>
-          <div class="concept-name">회사 · 발표</div>
-          <div class="concept-desc">신뢰감 있는<br>파란 계열</div>
-        </div>
-        <div class="concept-check">✓</div>
-      </button>
-
-      <button class="concept-card" id="concept-evt" onclick="selectConcept('evt',this)">
-        <div class="concept-preview concept-preview-evt">
-          <div class="cp-dot"></div><div class="cp-dot"></div><div class="cp-dot"></div>
-          <div class="cp-bar" style="width:70%"></div>
-          <div class="cp-bar" style="width:85%"></div>
-          <div class="cp-bar" style="width:60%"></div>
-        </div>
-        <div class="concept-info">
-          <div class="concept-icon">🎉</div>
-          <div class="concept-name">이벤트 · 행사</div>
-          <div class="concept-desc">활기차고 생동감 있는<br>핑크 계열</div>
-        </div>
-        <div class="concept-check">✓</div>
-      </button>
-
-    </div>
-
-    <!-- ── 세션 만들기 카드 ── -->
-    <div class="land-card" style="margin-top:0;">
-      <div class="land-card-title">새 세션 만들기</div>
-
-      <div class="land-field">
-        <label class="land-label">세션 제목</label>
-        <input id="sessionTitleInput" class="land-input" placeholder="예: 2월 신입사원 교육" />
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="land-field">
-          <label class="land-label">날짜</label>
-          <input id="sessionDateInput" type="date" class="land-input" />
-        </div>
-        <div class="land-field">
-          <label class="land-label">대상</label>
-          <input id="sessionAudienceInput" class="land-input" placeholder="예: 마케팅팀" />
-        </div>
-      </div>
-
-      <button class="land-primary-btn" onclick="createNewSession()">
-        <span style="font-size:18px;">🚀</span>
-        <span>세션 시작하기</span>
-      </button>
-    </div>
-
-    <!-- ── 참여 카드 ── -->
-    <div class="land-card land-join-card">
-      <div class="land-card-title">세션 참여</div>
-      <div class="land-join-row">
-        <input id="joinCodeInput" class="land-input" placeholder="참여 코드 입력  예: ABC-123" maxlength="20"
-          onkeypress="if(event.key==='Enter') joinSession()" style="flex:1;" />
-        <button class="land-join-btn btn-join" onclick="joinSession()">참여 →</button>
       </div>
     </div>
 
-    <!-- ── 최근 기록 ── -->
-    <div class="land-card" style="padding-bottom:8px;">
-      <div class="land-card-title" style="margin-bottom:4px;">최근 세션</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;font-weight:600;">▶ 재개를 누르면 기존 데이터 그대로 이어볼 수 있어요</div>
-      <div id="localHistory" class="history-list"></div>
+    <div class="new-session-right">
+      <button class="primary-btn" onclick="createNewSession()">🚀 새 세션 만들기</button>
+      <button class="ghost-btn" onclick="openUnifiedHistory()">🗂 세션 히스토리</button>
     </div>
+  </div>
 
-  </div><!-- end land-scroll -->
+  <div class="history-block">
+    <div class="history-title">최근 기록</div>
+    <div class="history-sub">기기/브라우저에 저장된 최근 세션이에요. (관리자 링크로 접속하면 모든 기기에서 히스토리가 동기화돼요)</div>
+    <div id="localHistory" class="history-list"></div>
+  </div>
+</div>
 </div>
 
 <!-- ============================================================
@@ -2383,78 +2151,6 @@ async function initHostSession(c, initialAct) {
   }
 }
 
-// ── 기존 세션 재연결 (데이터 초기화 없이) ──
-async function reconnectHostSession(code, c) {
-  if (!FIREBASE_READY || !db) {
-    alert('Firebase가 연결되어 있어야 세션을 재개할 수 있어요.');
-    return;
-  }
-
-  // Firebase에서 기존 세션 데이터 확인
-  const snap = await db.ref(`sessions/${code}`).once('value');
-  if (!snap.exists()) {
-    alert(`세션 코드 "${code}" 를 Firebase에서 찾을 수 없어요.\n세션이 만료됐거나 삭제된 것 같아요.`);
-    return;
-  }
-
-  const data = snap.val();
-  ctx = data.ctx || c || 'edu';
-  roomCode = code;
-  sessionTitle = data.title || '';
-  isHost = true;
-
-  setTheme(ctx);
-  setTopTitle(sessionTitle);
-
-  // UI 초기화 (데이터는 Firebase에서 읽어올 것)
-  totalParticipants = data.participants || 0;
-  totalResponses    = data.responses   || 0;
-  qaItems = [];
-  wcData  = {};
-  sliderResponses = [];
-  ratingItemsById = {};
-  ratingVotesById = {};
-  activeRatingId  = data.ratingActiveId || null;
-
-  document.getElementById('navRoomCode').textContent = roomCode;
-  document.getElementById('qrCode').textContent = roomCode;
-  document.getElementById('navCtxPill').textContent = ctxConfig[ctx]?.label || '';
-  const joinUrl = location.origin + location.pathname + '?join=' + roomCode;
-  const linkDisplay = document.getElementById('joinLinkDisplay');
-  if (linkDisplay) linkDisplay.textContent = joinUrl;
-  setTimeout(() => drawQR(joinUrl), 300);
-
-  updateStats();
-  showScreen('host');
-  switchActivity(data.activeActivity || 'poll', null);
-
-  // 리스너 재연결 (initHostSession과 동일하지만 .set() 없음)
-  fbOffAll();
-  fbOn('participants','value', s=>{ totalParticipants=s.val()||0; updateStats(); });
-  attachParticipantMetaListeners();
-  attachRatingListeners();
-  fbOn('nicknames','value', s=>{ participantNames=s.val()||{}; renderParticipantNames(); });
-  fbOn('responses','value', s=>{ totalResponses=s.val()||0; updateStats(); });
-
-  fbOn('poll','value', s=>{
-    const d=s.val(); if(!d) return;
-    pollLive=d.live||false;
-    if(d.live&&d.opts){ const v=d.votes||{}; pollData={q:d.q,opts:d.opts,votes:d.opts.map((_,i)=>v[i]||0)}; if(document.getElementById('poll-result-card')?.style.display!=='none') renderPollBars(); }
-  });
-  fbOn('wordcloud','value', s=>{ wcData=s.val()||{}; if(document.getElementById('ap-wordcloud')?.classList.contains('active')){ renderWC(); updateCount('cnt-wc',Object.keys(wcData).length); } });
-  fbOn('qa','child_added', s=>{ const item={...s.val(),id:s.key,voted:false}; if(!qaItems.find(i=>i.id===s.key)){ qaItems.push(item); totalQuestions=qaItems.length; updateStats(); renderQA(); } });
-  fbOn('qa','child_changed', s=>{ const idx=qaItems.findIndex(i=>i.id===s.key); if(idx>=0){ qaItems[idx]={...qaItems[idx],...s.val(),id:s.key}; renderQA(); } });
-  fbOn('slider','value', s=>{ sliderResponses=s.val()||[]; if(document.getElementById('ap-slider')?.classList.contains('active')){ renderSliderResults(); updateCount('cnt-slider',sliderResponses.length); } });
-  db.ref('.info/connected').on('value', s=>setFbStatus(s.val()?'connected':'offline'));
-
-  // 히스토리 저장 시간 갱신
-  saveSessionToLocal(code, ctx, sessionTitle);
-  renderLocalHistory();
-
-  addFeed(`🔄 세션 재개됨: ${code}`, '#22c55e');
-  addFeed(`기존 데이터를 불러왔어요`, 'var(--theme-a)');
-}
-
 // 참여자 상태
 let pVoted = false;
 let pLastQuizTs = null;
@@ -2633,10 +2329,11 @@ function renderParticipantRating(code){
   const pContent=document.getElementById('pContent');
   if(!pTitle||!pContent) return;
 
+  // active id + item meta 가져오기
   db.ref(`sessions/${code}/ratingActiveId`).once('value').then(snap=>{
     const id=snap.val();
     if(!id){ pTitle.textContent='만족도 체크'; pContent.innerHTML='<div style="text-align:center;padding:28px;color:var(--muted);font-weight:800;">아직 문항이 전송되지 않았어요.</div>'; return; }
-    activeRatingId=id;
+    activeRatingId=id; // rate()가 같은 id로 저장하도록
 
     Promise.all([
       db.ref(`sessions/${code}/ratingItems/${id}`).once('value'),
@@ -2652,36 +2349,24 @@ function renderParticipantRating(code){
       pTitle.textContent=item.title||'만족도 체크';
       const g=iconGlyph(item.icon||'star');
 
-      // 이미 이 문항 제출했는지 확인
-      if(!window._ratingSubmitted) window._ratingSubmitted={};
-      const submittedKey='ratingSubmitted_'+code+'_'+id;
-
-      if(window._ratingSubmitted[submittedKey]){
-        pContent.innerHTML=`
-          <div style="text-align:center;padding:20px 0;">
-            <div style="font-size:48px;margin-bottom:12px;">✅</div>
-            <div style="font-size:18px;font-weight:800;color:var(--theme-a);margin-bottom:8px;">응답 완료!</div>
-            <div style="font-size:13px;color:var(--muted);">이 문항에 이미 응답했어요.<br>다음 문항이 전송되면 자동으로 화면이 바뀝니다.</div>
-          </div>`;
-        return;
-      }
-
-      // 별점 선택 UI — pParticipantSelectStar 사용
-      _pParticipantCurrentStar = 0;
-      pContent.innerHTML=`
+      pContent.innerHTML = `
         <div style="text-align:center;">
-          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:14px;">아래 아이콘을 눌러 응답해 주세요</div>
-          <div id="pRatingStars" style="display:flex;justify-content:center;gap:10px;font-size:44px;margin-bottom:12px;">
-            ${Array.from({length:5},(_,i)=>`<span style="cursor:pointer;opacity:0.3;transition:all 0.15s;" id="prs${i}" onclick="pParticipantSelectStar(${i+1},'${id}','${code}')" onmouseover="pParticipantHoverStar(${i+1})" onmouseout="pParticipantUnhoverStar('${id}')">${g}</span>`).join('')}
+          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:10px;">아래 아이콘을 눌러 응답해 주세요</div>
+          <div class="rating-stars" id="pRatingStars" style="font-size:44px;gap:12px;">
+            ${Array.from({length:5},(_,i)=>`<span class="star" onclick="rate(${i+1})">${g}</span>`).join('')}
           </div>
-          <div style="min-height:22px;font-size:14px;color:var(--muted);margin-bottom:16px;" id="pRatingLabel">별점을 선택해 주세요</div>
-          <div id="pRatingSubmitArea"></div>
-        </div>`;
+          <div style="margin-top:12px;font-size:12px;color:var(--muted);" id="pRatingMini">실시간 평균/분포는 발표자 화면에서 확인돼요</div>
+        </div>
+      `;
 
-      const ref=db.ref(`sessions/${code}/ratingVotes/${id}`);
+      // votes 변화도 따라가서 badge 업데이트 (가벼운 on)
+      const ref = db.ref(`sessions/${code}/ratingVotes/${id}`);
       if(window._pRatingVotesRef) window._pRatingVotesRef.off();
-      window._pRatingVotesRef=ref;
-      ref.on('value',sn=>{ const v=sn.val()||[]; ratingVotesById[id]=Array.isArray(v)?v:[]; });
+      window._pRatingVotesRef = ref;
+      ref.on('value', sn=>{
+        const v = sn.val() || [];
+        ratingVotesById[id]=Array.isArray(v)?v:[];
+      });
     });
   });
 }
@@ -3440,93 +3125,42 @@ function renderRatingEditList() {
     return;
   }
 
-  // ── 현재 포커스된 input id 기억 ──
-  const focusedId = document.activeElement?.id || null;
-
-  // ── 기존 input 값 보존 ──
-  const savedTitles = {};
-  ids.forEach(id => {
-    const el = document.getElementById(`rating-title-${id}`);
-    if (el) savedTitles[id] = el.value;
-  });
-
-  // ── 없어진 카드 제거 ──
-  const existingCards = box.querySelectorAll('[data-rating-card]');
-  existingCards.forEach(card => {
-    if (!ids.includes(card.dataset.ratingCard)) card.remove();
-  });
-
-  ids.forEach((id, idx) => {
+  box.innerHTML = ids.map((id, idx) => {
     const it = ratingItemsById[id] || {};
+    const title = escapeHtml(it.title || `문항 ${idx+1}`);
     const icon = it.icon || 'star';
     const isActive = id === activeRatingId;
-    // 제목: input에 값이 보존된 경우 우선 사용 (타이핑 중 보호)
-    const titleVal = savedTitles[id] !== undefined ? savedTitles[id] : (it.title || `문항 ${idx+1}`);
-    const title = escapeHtml(titleVal);
 
-    const existingCard = box.querySelector(`[data-rating-card="${id}"]`);
+    const opts = Object.keys(ratingIconSets).map(k =>
+      `<option value="${k}" ${k===icon?'selected':''}>${ratingIconSets[k].label}</option>`
+    ).join('');
 
-    if (existingCard) {
-      // ── 카드 이미 존재: 버튼 상태만 업데이트 (input 건드리지 않음) ──
-      const launchBtn = existingCard.querySelector('[data-launch-btn]');
-      if (launchBtn) {
-        launchBtn.className = `btn-sm ${isActive ? 'btn-primary-theme' : 'btn-ghost'}`;
-        launchBtn.textContent = isActive ? '✅ 전송됨' : '📢 전송';
-      }
-      // 응답 수 배지만 업데이트
-      const respBadge = existingCard.querySelector('[data-resp-badge]');
-      if (respBadge) respBadge.textContent = `${(ratingVotesById[id]||[]).length}명 응답`;
-
-      // 아이콘 배지
-      const iconBadge = existingCard.querySelector('[data-icon-badge]');
-      if (iconBadge) iconBadge.textContent = `${iconGlyph(icon)} 아이콘`;
-
-      // 카드 테두리 (active 여부)
-      existingCard.style.border = isActive ? '1.5px solid var(--theme-a)' : '1px solid var(--border)';
-    } else {
-      // ── 새 카드 생성 ──
-      const opts = Object.keys(ratingIconSets).map(k =>
-        `<option value="${k}" ${k===icon?'selected':''}>${ratingIconSets[k].label}</option>`
-      ).join('');
-
-      const div = document.createElement('div');
-      div.dataset.ratingCard = id;
-      div.className = 'card';
-      div.style.cssText = `border-radius:14px;border:${isActive?'1.5px solid var(--theme-a)':'1px solid var(--border)'};background:var(--white);margin-bottom:10px;`;
-      div.innerHTML = `
+    return `
+      <div class="card" style="border-radius:14px;border:1px solid var(--border);background:var(--white);margin-bottom:10px;">
         <div class="card-body" style="padding:14px;">
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <input class="form-input" id="rating-title-${id}" value="${title}" placeholder="예: 오늘 강의는 어땠나요?" style="flex:1;min-width:220px;">
-            <select class="form-input" id="rating-icon-${id}" style="width:160px;min-width:160px;">${opts}</select>
-            <button class="btn-sm ${isActive ? 'btn-primary-theme' : 'btn-ghost'}" data-launch-btn onclick="launchRating('${id}')">${isActive ? '✅ 전송됨' : '📢 전송'}</button>
+            <select class="form-input" id="rating-icon-${id}" style="width:160px;min-width:160px;">
+              ${opts}
+            </select>
+
+            <button class="btn-sm ${isActive ? 'btn-primary-theme' : 'btn-ghost'}" onclick="launchRating('${id}')">
+              ${isActive ? '✅ 전송됨' : '📢 전송'}
+            </button>
             <button class="btn-sm btn-ghost" onclick="saveRatingItem('${id}')">💾 저장</button>
             <button class="btn-sm btn-ghost" onclick="duplicateRatingItem('${id}')">⎘ 복제</button>
             <button class="btn-sm btn-ghost" onclick="removeRatingItem('${id}')" style="border-color:#ffb3b3;color:#b10000;background:#fff;">삭제</button>
           </div>
           <div style="margin-top:8px;font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="badge" data-icon-badge>${iconGlyph(icon)} 아이콘</span>
-            <span class="badge" data-resp-badge>${(ratingVotesById[id]||[]).length}명 응답</span>
+            <span class="badge">${iconGlyph(icon)} 아이콘</span>
+            <span class="badge">${(ratingVotesById[id]||[]).length}명 응답</span>
           </div>
         </div>
-      `;
-      box.appendChild(div);
-    }
-  });
+      </div>
+    `;
+  }).join('');
 
-  // 카드 순서를 ids 순서와 맞춤
-  ids.forEach((id, idx) => {
-    const card = box.querySelector(`[data-rating-card="${id}"]`);
-    if (card && box.children[idx] !== card) box.insertBefore(card, box.children[idx] || null);
-  });
-
-  // 포커스 복원
-  if (focusedId) {
-    const el = document.getElementById(focusedId);
-    if (el && document.activeElement !== el) {
-      try { el.focus(); } catch(e) {}
-    }
-  }
-
+  // 미리보기
   updateRatingPreview();
 }
 
@@ -4368,22 +4002,13 @@ function selectCtx(c) {
 })();
 
 // ── 새 세션 만들기 ──
-// ── 디자인 컨셉 선택 ──
-function selectConcept(c, el) {
-  ctx = c;
-  document.querySelectorAll('.concept-card').forEach(card => card.classList.remove('active'));
-  if (el) el.classList.add('active');
-  setTheme(c);
-  // 참여 카드 컬러도 즉시 반영 (theme-l 배경)
-}
-
 function createNewSession() {
   const title = (document.getElementById('sessionTitleInput')?.value || '').trim();
   const date  = (document.getElementById('sessionDateInput')?.value || '').trim();
   const audience = (document.getElementById('sessionAudienceInput')?.value || '').trim();
   const parts = [title, date, audience].filter(Boolean);
   const fullTitle = parts.join(' | ') || '';
-  // ctx는 selectConcept에서 설정됨 (기본값 'edu')
+  // PIN 인증 후 세션 시작
   showAdminPinOverlay([ctx || 'edu', 'poll', fullTitle]);
 }
 
@@ -4433,7 +4058,7 @@ function renderLocalHistory() {
     '<div class="hist-code">' + escapeHtml(s.title || s.code || '세션') + '</div>' +
     '<div class="hist-time">' + escapeHtml(s.code || '') + ' · ' + (s.time || '') + '</div></div>' +
     '<div class="hist-actions">' +
-    '<button class="small-btn primary" style="background:var(--theme-g);color:#fff;border:none;font-weight:800;" onclick="resumeSession(\'' + s.code + '\',\'' + (s.ctx||'edu') + '\')">▶ 재개</button>' +
+    '<button class="small-btn" onclick="resumeSession(\'' + s.code + '\',\'' + (s.ctx||'edu') + '\')">▶ 재개</button>' +
     '<button class="small-btn danger" onclick="deleteLocalSession(' + (sessions.length-1-i) + ')">삭제</button>' +
     '</div></div>'
   ).join('');
@@ -4460,10 +4085,7 @@ function deleteLocalSession(idx) {
 }
 
 function resumeSession(code, c) {
-  // PIN 인증 후 기존 세션 재연결 (새 세션 생성 X)
-  _pendingResumeCode = code;
-  _pendingResumeCtx  = c || 'edu';
-  showAdminPinOverlay(['__resume__', code, c]);
+  showAdminPinOverlay([c || 'edu', 'poll', '']);
 }
 
 // ── 저장된 세션/템플릿 오버레이 ──
@@ -4664,14 +4286,6 @@ async function verifyAdminPin() {
   const args = _pendingHostArgs;
   _pendingHostArgs = null;
   closeAdminPinOverlay();
-
-  // 세션 재개 모드
-  if (args && args[0] === '__resume__') {
-    const resumeCode = args[1];
-    const resumeCtx  = args[2] || 'edu';
-    reconnectHostSession(resumeCode, resumeCtx);
-    return;
-  }
 
   // 대기 중이던 startAsHost 실행
   if (args) {
