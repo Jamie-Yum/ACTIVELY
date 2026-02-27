@@ -1574,13 +1574,25 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="card-title">퀴즈 설정</div>
           </div>
           <div class="card-body">
-            <div class="form-group" style="margin-bottom:14px;">
-              <label class="form-label">⏱ 문제당 제한 시간</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-                <button class="quiz-timer-btn" data-sec="10" onclick="setQuizTimer(10,this)">10초</button>
-                <button class="quiz-timer-btn active" data-sec="20" onclick="setQuizTimer(20,this)">20초</button>
-                <button class="quiz-timer-btn" data-sec="30" onclick="setQuizTimer(30,this)">30초</button>
-                <button class="quiz-timer-btn" data-sec="0" onclick="setQuizTimer(0,this)">무제한</button>
+            <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:160px;">
+                <label class="form-label">⏱ 문제당 제한 시간 (초)</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                  <input type="number" id="quizTimerInput" min="0" max="300" value="20"
+                    class="form-input" style="width:90px;text-align:center;font-size:18px;font-weight:800;"
+                    oninput="setQuizTimerFromInput(this.value)"
+                    placeholder="초">
+                  <span style="font-size:12px;color:var(--muted);font-weight:700;">초 &nbsp;(0 = 무제한)</span>
+                </div>
+              </div>
+              <div style="flex:1;min-width:160px;">
+                <label class="form-label">📋 퀴즈 유형</label>
+                <select id="quizTypeSelect" class="form-input" style="margin-top:6px;" onchange="setQuizType(this.value)">
+                  <option value="multiple">📝 객관식 (4지선다)</option>
+                  <option value="ox">⭕ OX 퀴즈</option>
+                  <option value="truefalse">✅ True / False</option>
+                  <option value="short">🔤 단답형 (텍스트)</option>
+                </select>
               </div>
             </div>
             <div id="quizEditList"></div>
@@ -2035,25 +2047,25 @@ let qaFilter = 'all';
 
 const quizzes = {
   edu: [
-    {q:'객체 지향 프로그래밍의 핵심 개념이 아닌 것은?',opts:['캡슐화','상속','재귀','다형성'],correct:2},
-    {q:'HTTP 메서드 중 데이터를 생성할 때 주로 사용하는 것은?',opts:['GET','POST','PUT','DELETE'],correct:1},
-    {q:'CSS에서 요소를 가운데 정렬하는 가장 현대적인 방법은?',opts:['float:center','margin:0 auto + width','Flexbox / Grid','text-align:center'],correct:2},
-    {q:'Git에서 변경 사항을 임시 저장하는 명령어는?',opts:['git save','git stash','git commit','git store'],correct:1},
-    {q:'JavaScript에서 불변(immutable) 변수 선언 키워드는?',opts:['var','let','const','static'],correct:2},
+    {type:'multiple', q:'오늘 점심 메뉴로 가장 먹고 싶은 건?', opts:['🍜 라면','🍱 도시락','🍔 버거','🥗 샐러드'], correct:0},
+    {type:'ox', q:'오늘 강의 내용이 이해됐다!', opts:['⭕ 그렇다','❌ 아니다'], correct:0},
+    {type:'multiple', q:'이번 세션에서 가장 유익했던 부분은?', opts:['개념 설명','실습 예제','Q&A 시간','전체 다 좋았어요'], correct:3},
+    {type:'truefalse', q:'복습은 학습 효과를 높이는 데 도움이 된다.', opts:['True ✅','False ❌'], correct:0},
+    {type:'multiple', q:'다음 세션에서 더 다루면 좋겠는 주제는?', opts:['심화 이론','실전 예제','팀 프로젝트','자유 Q&A'], correct:1},
   ],
   biz: [
-    {q:'OKR에서 "KR"은 무엇의 약자인가요?',opts:['Key Resources','Key Results','Key Roadmap','Key Revenue'],correct:1},
-    {q:'애자일 스프린트의 가장 일반적인 기간은?',opts:['1일','1주일','2주일','1개월'],correct:2},
-    {q:'고객 여정 지도의 주요 목적은?',opts:['매출 추적','고객 경험 시각화','팀 관리','제품 개발'],correct:1},
-    {q:'NPS의 측정 범위는?',opts:['-100 ~ 100','0 ~ 100','1 ~ 10','0 ~ 10'],correct:0},
-    {q:'SWOT 분석에서 "O"는?',opts:['Organization','Opportunities','Output','Operations'],correct:1},
+    {type:'multiple', q:'다음 팀 회식 장소로 가장 좋은 곳은?', opts:['🍖 고기집','🍣 일식','🍕 양식','🌮 멕시칸'], correct:0},
+    {type:'ox', q:'이번 프로젝트 방향에 동의하시나요?', opts:['⭕ 동의','❌ 반대'], correct:0},
+    {type:'multiple', q:'가장 시급하게 개선이 필요한 업무 영역은?', opts:['커뮤니케이션','프로세스','도구/툴','팀 문화'], correct:0},
+    {type:'truefalse', q:'현재 업무 속도가 적절하다고 생각한다.', opts:['True ✅','False ❌'], correct:0},
+    {type:'multiple', q:'업무 집중도가 가장 높은 시간대는?', opts:['오전 9~11시','오후 1~3시','오후 3~5시','저녁 이후'], correct:0},
   ],
   evt: [
-    {q:'세계에서 가장 많이 사용되는 SNS 플랫폼은?',opts:['Instagram','TikTok','Facebook','YouTube'],correct:2},
-    {q:'ChatGPT를 개발한 회사는?',opts:['Google','Microsoft','OpenAI','Meta'],correct:2},
-    {q:'"메타버스"라는 용어를 처음 사용한 소설은?',opts:['뉴로맨서','스노우 크래시','레디 플레이어 원','브레이브 뉴 월드'],correct:1},
-    {q:'세계 최초 상업용 웹사이트 등장 연도는?',opts:['1989','1991','1993','1995'],correct:2},
-    {q:'현재 전 세계 인터넷 사용자 수는?',opts:['10억 명','20억 명','30억 명','50억 명'],correct:3},
+    {type:'multiple', q:'오늘 이벤트에서 기대하는 것은?', opts:['새로운 인맥','유용한 정보','즐거운 경험','뭐든 다 좋아'], correct:3},
+    {type:'ox', q:'이런 이벤트에 또 참여하고 싶다!', opts:['⭕ 물론이죠','❌ 글쎄요'], correct:0},
+    {type:'multiple', q:'오늘 이 자리에 오게 된 계기는?', opts:['지인 추천','SNS 광고','검색','직접 발견'], correct:0},
+    {type:'truefalse', q:'오늘 새로운 것을 배웠다.', opts:['True ✅','False ❌'], correct:0},
+    {type:'multiple', q:'가장 인상 깊었던 순간은?', opts:['오프닝','발표 세션','네트워킹','전체 다'], correct:3},
   ]
 };
 
@@ -2424,10 +2436,13 @@ function renderParticipantQuiz(code, questions, qIdx) {
   const pContent=document.getElementById('pContent');
   if(!pTitle||!pContent) return;
   pCurrentQuizQuestions=questions;
+
+  // 전체 완료 화면
   if(qIdx>=questions.length){
     const pct=Math.round(pQuizScore/questions.length*100);
     pTitle.textContent='퀴즈 완료!';
-    pContent.innerHTML='<div style="text-align:center;padding:24px 0;">'+
+    pContent.innerHTML=
+      '<div style="text-align:center;padding:24px 0;">'+
       '<div style="font-size:56px;margin-bottom:10px;">'+(pct>=80?'🏆':pct>=60?'👍':'💪')+'</div>'+
       '<div style="font-size:24px;font-weight:900;color:var(--theme-a);margin-bottom:6px;">'+pQuizScore+' / '+questions.length+' 정답</div>'+
       '<div style="font-size:15px;color:var(--muted);">정답률 '+pct+'%</div></div>';
@@ -2435,50 +2450,70 @@ function renderParticipantQuiz(code, questions, qIdx) {
     renderMyResponses();
     return;
   }
-  const q=questions[qIdx]; pQuizAnswered=false;
+
+  const q=questions[qIdx];
+  const type = q.type || 'multiple';
+  pQuizAnswered=false;
   pTitle.textContent='Q'+(qIdx+1)+' / '+questions.length;
 
-  // 타이머 HTML
+  // 타이머 바
   const timerHtml = pQuizTimerSec>0 ?
-    '<div style="position:relative;height:8px;background:var(--off2);border-radius:100px;margin-bottom:16px;overflow:hidden;">'+
+    '<div style="position:relative;height:6px;background:var(--off2);border-radius:100px;margin-bottom:14px;overflow:hidden;">'+
     '<div id="pTimerBar" style="position:absolute;left:0;top:0;height:100%;width:100%;background:var(--theme-a);border-radius:100px;"></div></div>' : '';
 
-  pContent.innerHTML=timerHtml+
-    '<div style="font-size:16px;font-weight:800;margin-bottom:16px;line-height:1.5;color:var(--text);">'+q.q+'</div>'+
-    q.opts.map((o,i)=>
-      '<button id="pqo'+i+'" onclick="answerParticipantQuiz('+i+','+q.correct+',\''+code+'\','+qIdx+')" '+
-      'style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-size:14px;font-weight:600;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;">'+
-      '<span style="width:28px;height:28px;border-radius:7px;background:var(--off2);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">'+'ABCD'[i]+'</span>'+o+'</button>'
-    ).join('');
+  // 진행 표시 + 제출 버튼 (최상단 — 짤림 방지)
+  const isLast = qIdx === questions.length - 1;
+  const progressHtml =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'+
+    '<div style="font-size:11px;color:var(--muted);font-weight:800;">'+
+      (qIdx+1)+' / '+questions.length+' 문제'+
+    '</div>'+
+    (isLast ? '<div id="pQuizSubmitBadge" style="display:none;background:var(--theme-a);color:#fff;border-radius:100px;padding:5px 14px;font-size:12px;font-weight:800;cursor:pointer;" onclick="submitParticipantQuizFinal()">✅ 제출하기</div>' : '')+
+    '</div>';
 
-  // 타이머 애니메이션 — rAF로 DOM 확정 후 시작
+  let optsHtml = '';
+  if (type === 'ox' || type === 'truefalse') {
+    optsHtml = '<div style="display:flex;gap:12px;margin-top:8px;">'+
+      q.opts.map((o,i)=>
+        '<button id="pqo'+i+'" onclick="answerParticipantQuiz('+i+','+q.correct+',\''+code+'\','+qIdx+')" '+
+        'style="flex:1;padding:20px 10px;border-radius:16px;border:2px solid var(--border);background:var(--off);font-size:22px;font-weight:800;cursor:pointer;text-align:center;">'+
+        o+'</button>'
+      ).join('')+'</div>';
+  } else if (type === 'short') {
+    optsHtml =
+      '<textarea id="pQuizShortAns" style="width:100%;min-height:90px;margin-top:8px;padding:12px;border-radius:12px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;resize:vertical;" placeholder="답을 입력하세요..."></textarea>'+
+      '<button onclick="answerParticipantQuizShort(\''+q.answer+'\',\''+code+'\','+qIdx+')" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:none;background:var(--theme-g);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">확인</button>';
+  } else {
+    optsHtml = '<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">'+
+      q.opts.map((o,i)=>
+        '<button id="pqo'+i+'" onclick="answerParticipantQuiz('+i+','+q.correct+',\''+code+'\','+qIdx+')" '+
+        'style="width:100%;padding:13px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-size:14px;font-weight:600;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;">'+
+        '<span style="width:26px;height:26px;border-radius:7px;background:var(--off2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">'+'ABCD'[i]+'</span>'+
+        escapeHtml(o)+'</button>'
+      ).join('')+'</div>';
+  }
+
+  pContent.innerHTML = timerHtml + progressHtml +
+    '<div style="font-size:16px;font-weight:800;margin-bottom:14px;line-height:1.5;color:var(--text);">'+escapeHtml(q.q)+'</div>'+
+    optsHtml;
+
+  // 타이머 애니메이션
   if(pQuizTimerSec>0){
-    const startTime=Date.now();
     const duration=pQuizTimerSec*1000;
-    const qSnapshot=qIdx;
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        const bar=document.getElementById('pTimerBar');
-        if(bar){
-          bar.style.transition='width '+pQuizTimerSec+'s linear';
-          bar.style.width='0%';
-        }
-      });
-    });
-    // 타이머 종료 시 자동답변 처리 (시간초과)
-    const tsSnapshot = pLastQuizTs;
+    const tsSnapshot=pLastQuizTs;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const bar=document.getElementById('pTimerBar');
+      if(bar){ bar.style.transition='width '+pQuizTimerSec+'s linear'; bar.style.width='0%'; }
+    }));
     setTimeout(()=>{
-      if(!pQuizAnswered && pLastQuizTs === tsSnapshot) {
-        // 시간초과 → 오답 처리만 하고 대기 (자동이동 X)
-        answerParticipantQuiz(-1, q.correct, code, qIdx);
-      }
-    }, duration);
+      if(!pQuizAnswered&&pLastQuizTs===tsSnapshot) answerParticipantQuiz(-1,q.correct,code,qIdx);
+    },duration);
   }
 }
 
 async function answerParticipantQuiz(chosen, correct, code, qIdx) {
   if(pQuizAnswered) return; pQuizAnswered=true;
-  document.querySelectorAll('#pContent button').forEach(b=>{b.style.pointerEvents='none';b.style.cursor='default';});
+  document.querySelectorAll('#pContent button[id^="pqo"]').forEach(b=>{b.style.pointerEvents='none';b.style.cursor='default';});
   const isCorrect=chosen===correct;
   if(isCorrect) pQuizScore++;
   const cb=document.getElementById('pqo'+chosen);
@@ -2491,15 +2526,92 @@ async function answerParticipantQuiz(chosen, correct, code, qIdx) {
       nickname:participantNickname||'익명', qIdx, correct:isCorrect, ts:Date.now()
     });
   }
-  // 자동으로 다음 문제 이동 X → 발표자가 [다음 문제] 버튼 누를 때 이동
-  // 대기 메시지 표시
+
+  const isLastQ = pCurrentQuizQuestions && qIdx === pCurrentQuizQuestions.length - 1;
   setTimeout(() => {
-    const waitEl = document.createElement('div');
-    waitEl.style.cssText = 'margin-top:16px;padding:12px;background:var(--theme-l);border-radius:12px;text-align:center;font-size:13px;font-weight:800;color:var(--theme-a);';
-    waitEl.textContent = '✅ 답변 완료! 발표자가 다음 문제로 넘어갈 때까지 기다려 주세요.';
-    const content = document.getElementById('pContent');
-    if(content) content.appendChild(waitEl);
-  }, 400);
+    const content = document.getElementById('pContent'); if (!content) return;
+    if (isLastQ) {
+      // 마지막 문제 → 제출 버튼 배지 표시 (최상단)
+      const badge = document.getElementById('pQuizSubmitBadge');
+      if (badge) { badge.style.display = 'block'; }
+      // 하단에도 크게 제출 버튼 추가
+      const submitDiv = document.createElement('div');
+      submitDiv.style.cssText = 'margin-top:18px;';
+      submitDiv.innerHTML = '<button onclick="submitParticipantQuizFinal()" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--theme-g);color:#fff;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.15);">✅ 제출하기</button>';
+      content.appendChild(submitDiv);
+    } else {
+      const waitEl = document.createElement('div');
+      waitEl.style.cssText = 'margin-top:14px;padding:10px 14px;background:var(--theme-l);border-radius:12px;text-align:center;font-size:13px;font-weight:800;color:var(--theme-a);';
+      waitEl.textContent = '✅ 답변 완료! 발표자가 다음 문제로 넘어갈 때까지 기다려 주세요.';
+      content.appendChild(waitEl);
+    }
+  }, 350);
+}
+
+async function answerParticipantQuizShort(modelAnswer, code, qIdx) {
+  if(pQuizAnswered) return; pQuizAnswered=true;
+  const input = document.getElementById('pQuizShortAns');
+  const ans = (input?.value||'').trim();
+  if (!ans) { pQuizAnswered=false; alert('답을 입력해 주세요.'); return; }
+
+  // 단답형은 키워드 포함 여부로 간단 채점
+  const isCorrect = modelAnswer ? ans.includes(modelAnswer) : false;
+  if (isCorrect) pQuizScore++;
+  if (input) { input.disabled=true; input.style.background=isCorrect?'#e6f7ee':'#fdeaea'; }
+
+  if (db&&code) {
+    const cid=window._cid||(window._cid='u'+Date.now()+Math.random().toString(36).slice(2,6));
+    await db.ref(`sessions/${code}/quizAnswers/${cid}`).set({
+      nickname:participantNickname||'익명', qIdx, correct:isCorrect, answer:ans, ts:Date.now()
+    });
+  }
+
+  const isLastQ = pCurrentQuizQuestions && qIdx === pCurrentQuizQuestions.length - 1;
+  const content = document.getElementById('pContent'); if (!content) return;
+  const resultDiv = document.createElement('div');
+  resultDiv.style.cssText = 'margin-top:10px;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:800;';
+  if (modelAnswer) {
+    resultDiv.style.background = isCorrect ? '#e6f7ee' : '#fdeaea';
+    resultDiv.style.color = isCorrect ? '#1a6b3a' : '#b03030';
+    resultDiv.textContent = isCorrect ? '✅ 정답이에요!' : `❌ 모범 답안: ${modelAnswer}`;
+  } else {
+    resultDiv.style.background = 'var(--theme-l)'; resultDiv.style.color = 'var(--theme-a)';
+    resultDiv.textContent = '📝 응답이 전달됐어요.';
+  }
+  content.appendChild(resultDiv);
+
+  setTimeout(() => {
+    if (isLastQ) {
+      const badge = document.getElementById('pQuizSubmitBadge');
+      if (badge) badge.style.display = 'block';
+      const submitDiv = document.createElement('div');
+      submitDiv.style.cssText = 'margin-top:14px;';
+      submitDiv.innerHTML = '<button onclick="submitParticipantQuizFinal()" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--theme-g);color:#fff;font-size:16px;font-weight:900;cursor:pointer;">✅ 제출하기</button>';
+      content.appendChild(submitDiv);
+    } else {
+      const waitEl = document.createElement('div');
+      waitEl.style.cssText = 'margin-top:10px;padding:10px 14px;background:var(--theme-l);border-radius:12px;text-align:center;font-size:13px;font-weight:800;color:var(--theme-a);';
+      waitEl.textContent = '✅ 답변 완료! 발표자가 다음 문제로 넘어갈 때까지 기다려 주세요.';
+      content.appendChild(waitEl);
+    }
+  }, 350);
+}
+
+function submitParticipantQuizFinal() {
+  const questions = pCurrentQuizQuestions || [];
+  const pct = questions.length ? Math.round(pQuizScore/questions.length*100) : 0;
+  const pTitle=document.getElementById('pTitle');
+  const pContent=document.getElementById('pContent');
+  if(pTitle) pTitle.textContent='퀴즈 완료!';
+  if(pContent) pContent.innerHTML=
+    '<div style="text-align:center;padding:28px 0;">'+
+    '<div style="font-size:56px;margin-bottom:10px;">'+(pct>=80?'🏆':pct>=60?'👍':'💪')+'</div>'+
+    '<div style="font-size:24px;font-weight:900;color:var(--theme-a);margin-bottom:6px;">'+pQuizScore+' / '+questions.length+' 정답</div>'+
+    '<div style="font-size:15px;color:var(--muted);margin-bottom:10px;">정답률 '+pct+'%</div>'+
+    '<div style="font-size:13px;color:var(--muted);padding:10px 16px;background:var(--theme-l);border-radius:12px;font-weight:800;">제출됐어요! 수고하셨습니다 🎉</div>'+
+    '</div>';
+  pMyResponses.push({type:'퀴즈',content:pQuizScore+'/'+questions.length+' 정답',time:new Date().toLocaleTimeString()});
+  renderMyResponses();
 }
 
 // ============================================================
@@ -3191,6 +3303,16 @@ function setQuizTimer(sec, btn) {
   if (btn) btn.classList.add('active');
 }
 
+function setQuizTimerFromInput(val) {
+  const n = parseInt(val);
+  quizTimerSec = isNaN(n) || n < 0 ? 0 : n;
+}
+
+let currentQuizType = 'multiple';
+function setQuizType(type) {
+  currentQuizType = type;
+}
+
 function loadDefaultQuiz() {
   hostQuizQuestions = JSON.parse(JSON.stringify(quizzes[ctx] || quizzes.edu));
   renderQuizEditList();
@@ -3202,24 +3324,62 @@ function renderQuizEditList() {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0;">기본 문제를 불러오거나 직접 추가하세요.</div>';
     return;
   }
-  el.innerHTML = hostQuizQuestions.map((q, qi) =>
-    '<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--off);">' +
-    '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">' +
-    '<span style="font-size:12px;font-weight:700;color:var(--muted);">Q' + (qi+1) + '</span>' +
-    '<input type="text" class="form-input" value="' + q.q.replace(/"/g,'&quot;') + '" style="flex:1;" onchange="hostQuizQuestions[' + qi + '].q=this.value">' +
-    '<button onclick="removeQuizQuestion(' + qi + ')" style="border:1px solid var(--border2);background:transparent;border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;">✕</button></div>' +
-    '<div style="display:flex;flex-direction:column;gap:6px;">' +
-    q.opts.map((o, oi) =>
-      '<div style="display:flex;gap:6px;align-items:center;">' +
-      '<input type="radio" name="correct_' + qi + '" value="' + oi + '" ' + (q.correct===oi?'checked':'') + ' onchange="hostQuizQuestions[' + qi + '].correct=' + oi + '" style="accent-color:var(--theme-a);flex-shrink:0;">' +
-      '<input type="text" class="form-input" value="' + o.replace(/"/g,'&quot;') + '" style="flex:1;font-size:13px;" onchange="hostQuizQuestions[' + qi + '].opts[' + oi + ']=this.value"></div>'
-    ).join('') +
-    '</div><div style="font-size:11px;color:var(--muted);margin-top:6px;">라디오로 정답 선택</div></div>'
-  ).join('');
+  el.innerHTML = hostQuizQuestions.map((q, qi) => {
+    const type = q.type || 'multiple';
+    const typeLabel = {multiple:'📝 객관식', ox:'⭕ OX', truefalse:'✅ T/F', short:'🔤 단답형'}[type] || '📝 객관식';
+
+    let optsHtml = '';
+    if (type === 'ox' || type === 'truefalse') {
+      optsHtml = `<div style="display:flex;gap:10px;margin-top:6px;">
+        ${q.opts.map((o, oi) => `
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1.5px solid ${q.correct===oi?'var(--theme-a)':'var(--border)'};background:${q.correct===oi?'var(--theme-l)':'var(--off)'};cursor:pointer;font-size:13px;font-weight:700;">
+            <input type="radio" name="correct_${qi}" value="${oi}" ${q.correct===oi?'checked':''} onchange="hostQuizQuestions[${qi}].correct=${oi};renderQuizEditList()" style="accent-color:var(--theme-a);">
+            ${o}
+          </label>`).join('')}
+      </div>`;
+    } else if (type === 'short') {
+      optsHtml = `<div style="margin-top:8px;">
+        <label class="form-label" style="margin-bottom:4px;">모범 답안 (채점용)</label>
+        <input type="text" class="form-input" value="${(q.answer||'').replace(/"/g,'&quot;')}" placeholder="정답 키워드 입력" style="font-size:13px;" onchange="hostQuizQuestions[${qi}].answer=this.value">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">💡 단답형은 참여자가 직접 입력해요. 정확한 자동 채점은 어렵지만 모범 답안을 보여줄 수 있어요.</div>
+      </div>`;
+    } else {
+      optsHtml = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
+        ${q.opts.map((o, oi) => `
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="radio" name="correct_${qi}" value="${oi}" ${q.correct===oi?'checked':''} onchange="hostQuizQuestions[${qi}].correct=${oi}" style="accent-color:var(--theme-a);flex-shrink:0;">
+            <span style="width:22px;height:22px;border-radius:6px;background:var(--off2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">${'ABCD'[oi]}</span>
+            <input type="text" class="form-input" value="${o.replace(/"/g,'&quot;')}" style="flex:1;font-size:13px;" onchange="hostQuizQuestions[${qi}].opts[${oi}]=this.value">
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">라디오 버튼으로 정답 선택</div>`;
+    }
+
+    return `<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--off);">
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:800;color:var(--muted);">Q${qi+1}</span>
+        <span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:100px;background:var(--theme-l);color:var(--theme-a);">${typeLabel}</span>
+        <input type="text" class="form-input" value="${q.q.replace(/"/g,'&quot;')}" style="flex:1;min-width:180px;" onchange="hostQuizQuestions[${qi}].q=this.value">
+        <button onclick="removeQuizQuestion(${qi})" style="border:1px solid var(--border2);background:transparent;border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;">✕</button>
+      </div>
+      ${optsHtml}
+    </div>`;
+  }).join('');
 }
 
 function addQuizQuestion() {
-  hostQuizQuestions.push({q:'새 문제를 입력하세요', opts:['보기 A','보기 B','보기 C','보기 D'], correct:0});
+  const type = document.getElementById('quizTypeSelect')?.value || 'multiple';
+  let newQ;
+  if (type === 'ox') {
+    newQ = { type:'ox', q:'새 OX 문제를 입력하세요', opts:['⭕ 그렇다','❌ 아니다'], correct:0 };
+  } else if (type === 'truefalse') {
+    newQ = { type:'truefalse', q:'새 True/False 문제를 입력하세요', opts:['True ✅','False ❌'], correct:0 };
+  } else if (type === 'short') {
+    newQ = { type:'short', q:'새 단답형 문제를 입력하세요', opts:[], correct:-1, answer:'' };
+  } else {
+    newQ = { type:'multiple', q:'새 문제를 입력하세요', opts:['보기 A','보기 B','보기 C','보기 D'], correct:0 };
+  }
+  hostQuizQuestions.push(newQ);
   renderQuizEditList();
 }
 function removeQuizQuestion(idx) { hostQuizQuestions.splice(idx,1); renderQuizEditList(); }
