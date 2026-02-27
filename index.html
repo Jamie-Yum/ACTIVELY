@@ -1501,6 +1501,7 @@ body.ui-dark #screen-participant { background: var(--off); }
               <button class="btn-outline" onclick="resetPoll()">🔄 초기화</button>
               <button class="btn-outline" onclick="editPoll()">✏️ 수정</button>
               <button class="btn-launch" onclick="simulateVotes()">+ 테스트 투표</button>
+              <button class="btn-launch" onclick="shareActivityResult('poll')" style="background:linear-gradient(135deg,#6d28d9,#4f46e5);">📺 결과 공유</button>
             </div>
           </div>
         </div>
@@ -1528,6 +1529,7 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div style="margin-top:10px;display:flex;gap:8px">
               <button class="btn-outline" onclick="loadDemoWords()">🎲 데모 단어 로드</button>
               <button class="btn-outline" onclick="clearWords()">🗑 초기화</button>
+              <button class="btn-launch" onclick="shareActivityResult('wordcloud')" style="background:linear-gradient(135deg,#6d28d9,#4f46e5);">📺 결과 공유</button>
             </div>
           </div>
         </div>
@@ -1603,6 +1605,9 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="card-title">퀴즈 결과</div>
           </div>
           <div class="card-body" id="quizResultBody"></div>
+          <div style="padding:0 18px 14px;">
+            <button class="btn-launch" onclick="shareActivityResult('quiz')" style="background:linear-gradient(135deg,#6d28d9,#4f46e5);">📺 결과 공유</button>
+          </div>
         </div>
       </div>
 
@@ -1724,6 +1729,8 @@ body.ui-dark #screen-participant { background: var(--off); }
                   <button class="btn-outline" onclick="resetActiveRating()">🔄 현재 문항 초기화</button>
                   <button class="btn-outline" onclick="resetAllRatings()">🧹 전체 문항 초기화</button>
                   <button class="btn-launch" onclick="addRandomRatings()">🎲 테스트 응답</button>
+                  <button class="btn-launch" onclick="showRatingSummary()" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">📊 종합 브리프</button>
+                  <button class="btn-launch" onclick="shareActivityResult('rating')" style="background:linear-gradient(135deg,#6d28d9,#4f46e5);">📺 결과 공유</button>
                 </div>
               </div>
             </div>
@@ -2215,6 +2222,16 @@ async function joinSessionFirebase(code) {
       }
     });
 
+    // activityShare 리스너 → 발표자가 "결과 공유" 누르면 참여자도 오버레이
+    db.ref(`sessions/${code}/activityShare`).on('value', s=>{
+      const d = s.val();
+      if(d && d.type && d.ts) {
+        renderActivityShareOverlay(d, false);
+      } else {
+        document.getElementById('activityShareOverlay').style.display = 'none';
+      }
+    });
+
     // 투표 실시간 리스너
     db.ref(`sessions/${code}/poll`).on('value', s=>{
       const d=s.val(); if(!d) return;
@@ -2349,13 +2366,19 @@ function renderParticipantRating(code){
       pTitle.textContent=item.title||'만족도 체크';
       const g=iconGlyph(item.icon||'star');
 
+      pSelectedRating = 0; // 초기화
+
       pContent.innerHTML = `
         <div style="text-align:center;">
-          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:10px;">아래 아이콘을 눌러 응답해 주세요</div>
-          <div class="rating-stars" id="pRatingStars" style="font-size:44px;gap:12px;">
-            ${Array.from({length:5},(_,i)=>`<span class="star" onclick="rate(${i+1})">${g}</span>`).join('')}
+          <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:14px;">아이콘을 눌러 선택한 뒤 제출해 주세요</div>
+          <div id="pRatingStars" style="display:flex;justify-content:center;gap:10px;font-size:44px;margin-bottom:14px;">
+            ${Array.from({length:5},(_,i)=>`<span class="star" style="cursor:pointer;opacity:0.3;transition:all 0.15s;"
+              onmouseenter="pHoverStar(${i+1})"
+              onmouseleave="pUnhover()"
+              onclick="pSelectStar(${i+1})">${g}</span>`).join('')}
           </div>
-          <div style="margin-top:12px;font-size:12px;color:var(--muted);" id="pRatingMini">실시간 평균/분포는 발표자 화면에서 확인돼요</div>
+          <div id="pRatingLabel" style="font-size:14px;font-weight:800;color:var(--muted);margin-bottom:18px;min-height:22px;">별점을 선택해 주세요</div>
+          <div id="pRatingSubmitArea"></div>
         </div>
       `;
 
@@ -2791,6 +2814,262 @@ function hideQAShow(){
   if(ov) ov.style.display='none';
 }
 
+// ============================================================
+//  📺 활동 결과 공유 (호스트 → 참여자 전체 오버레이)
+// ============================================================
+async function shareActivityResult(type) {
+  let payload = { type, ts: Date.now() };
+
+  if (type === 'poll') {
+    if (!pollLive || !pollData) { alert('먼저 투표를 시작해 주세요.'); return; }
+    payload.poll = { q: pollData.q, opts: pollData.opts, votes: pollData.votes };
+  } else if (type === 'wordcloud') {
+    payload.wc = wcData || {};
+  } else if (type === 'rating') {
+    const ids = Object.keys(ratingItemsById || {}).sort((a,b)=>((ratingItemsById[a]?.order??0)-(ratingItemsById[b]?.order??0)));
+    payload.items = ids.map(id => ({
+      id, title: ratingItemsById[id]?.title || '만족도',
+      icon: ratingItemsById[id]?.icon || 'star',
+      votes: ratingVotesById[id] || []
+    }));
+  } else if (type === 'quiz') {
+    payload.quizAnswerCounts = quizAnswerCounts || {};
+    payload.questions = hostQuizQuestions || [];
+  }
+
+  if (db && roomCode) {
+    await db.ref(fbPath('activityShare')).set(payload);
+    addFeed(`📺 ${type} 결과를 참여자에게 공유했어요`, 'var(--theme-a)');
+  }
+  // 호스트도 즉시 표시
+  renderActivityShareOverlay(payload, true);
+}
+
+function hideActivityShare() {
+  document.getElementById('activityShareOverlay').style.display = 'none';
+  if (isHost && db && roomCode) {
+    db.ref(fbPath('activityShare')).remove();
+  }
+}
+
+function renderActivityShareOverlay(payload, isHostView) {
+  const ov = document.getElementById('activityShareOverlay');
+  const box = document.getElementById('activityShareContent');
+  const titleEl = document.getElementById('activityShareTitle');
+  if (!ov || !box) return;
+
+  let html = '';
+  if (payload.type === 'poll' && payload.poll) {
+    const { q, opts, votes } = payload.poll;
+    const total = (votes || []).reduce((a, b) => a + b, 0) || 1;
+    titleEl.textContent = '📊 투표 결과';
+    html = `<div style="font-size:18px;font-weight:900;margin-bottom:16px;color:var(--text);">${escapeHtml(q)}</div>`;
+    (opts || []).forEach((o, i) => {
+      const v = (votes || [])[i] || 0;
+      const pct = Math.round(v / total * 100);
+      html += `<div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:6px;">
+          <span>${escapeHtml(o)}</span><span style="color:var(--theme-a);font-weight:900;">${pct}%</span>
+        </div>
+        <div style="height:12px;background:var(--off2);border-radius:100px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:var(--theme-g);border-radius:100px;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">${v}표</div>
+      </div>`;
+    });
+    html += `<div style="margin-top:12px;padding:10px 14px;background:var(--off);border-radius:10px;font-size:12px;color:var(--muted);font-weight:800;">총 ${total}표 집계</div>`;
+  } else if (payload.type === 'wordcloud' && payload.wc) {
+    titleEl.textContent = '☁️ 워드클라우드 결과';
+    const sorted = Object.entries(payload.wc).sort((a, b) => b[1] - a[1]);
+    const max = sorted[0]?.[1] || 1;
+    html = `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:8px 0;">`;
+    sorted.forEach(([w, c], i) => {
+      const size = 13 + Math.round((c / max) * 30);
+      const colors = ['#2d7a5a','#2b4bbf','#c2337a','#f59e0b','#8b5cf6','#06b6d4'];
+      const col = colors[i % colors.length];
+      html += `<span style="font-size:${size}px;font-weight:700;color:${col};padding:4px 10px;background:${col}18;border-radius:8px;">${escapeHtml(w.replace(/_/g,' '))}</span>`;
+    });
+    html += `</div>`;
+    if (!sorted.length) html = '<div style="text-align:center;color:var(--muted);padding:24px;">아직 단어가 없어요.</div>';
+  } else if (payload.type === 'rating' && payload.items) {
+    titleEl.textContent = '⭐ 만족도 결과';
+    const items = payload.items;
+    const allVotes = items.flatMap(it => Array.isArray(it.votes) ? it.votes : []);
+    const overallAvg = allVotes.length ? (allVotes.reduce((a,b)=>a+b,0)/allVotes.length).toFixed(1) : '—';
+
+    // 전체 요약
+    html = `<div style="background:var(--theme-l);border-radius:16px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:18px;">
+      <div style="text-align:center;">
+        <div style="font-size:40px;font-weight:900;color:var(--theme-a);">${overallAvg}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:800;">전체 평균</div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:6px;">총 ${allVotes.length}명 응답 · ${items.length}개 문항</div>
+        ${[5,4,3,2,1].map(s=>{const cnt=allVotes.filter(v=>v===s).length;const pct=allVotes.length?Math.round(cnt/allVotes.length*100):0;
+          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+            <span style="font-size:11px;width:10px;font-weight:700;color:var(--theme-a);">${s}</span>
+            <div style="flex:1;height:6px;background:var(--off2);border-radius:3px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:var(--theme-g);border-radius:3px;"></div>
+            </div>
+            <span style="font-size:10px;color:var(--muted);width:28px;">${cnt}명</span>
+          </div>`;}).join('')}
+      </div>
+    </div>`;
+
+    // 개별 문항
+    items.forEach((it, idx) => {
+      const votes = Array.isArray(it.votes) ? it.votes : [];
+      const avg = votes.length ? (votes.reduce((a,b)=>a+b,0)/votes.length).toFixed(1) : '—';
+      const g = iconGlyph(it.icon || 'star');
+      html += `<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--surface-card);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="background:var(--theme-l);color:var(--theme-a);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:800;">Q${idx+1}</span>
+          <span style="font-weight:900;font-size:14px;flex:1;">${escapeHtml(it.title)}</span>
+          <span style="font-size:20px;font-weight:900;color:var(--theme-a);">${avg}</span>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:8px;">${Array.from({length:5},(_,i)=>`<span style="font-size:20px;opacity:${i<Math.round(avg)?1:0.25}">${g}</span>`).join('')}</div>
+        ${[5,4,3,2,1].map(s=>{const cnt=votes.filter(v=>v===s).length;const pct=votes.length?Math.round(cnt/votes.length*100):0;
+          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+            <span style="font-size:11px;width:10px;font-weight:700;color:var(--muted);">${s}</span>
+            <div style="flex:1;height:6px;background:var(--off2);border-radius:3px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:var(--theme-g);border-radius:3px;"></div>
+            </div>
+            <span style="font-size:10px;color:var(--muted);width:38px;">${pct}% (${cnt})</span>
+          </div>`;}).join('')}
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">${votes.length}명 응답</div>
+      </div>`;
+    });
+  } else if (payload.type === 'quiz') {
+    titleEl.textContent = '🏆 퀴즈 결과';
+    const qs = payload.questions || [];
+    const ac = payload.quizAnswerCounts || {};
+    html = '';
+    qs.forEach((q, qi) => {
+      const counts = ac[qi] || {};
+      const total = Object.values(counts).reduce((a,b)=>a+b,0) || 1;
+      html += `<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;background:var(--surface-card);">
+        <div style="font-weight:900;margin-bottom:10px;font-size:14px;">Q${qi+1}. ${escapeHtml(q.q)}</div>
+        ${(q.opts||[]).map((o,i)=>{const v=counts[i]||0;const pct=Math.round(v/total*100);const isCorrect=i===q.correct;
+          return `<div style="margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:4px;">
+              <span style="color:${isCorrect?'var(--theme-a)':'var(--text)'};">${isCorrect?'✅ ':''}${escapeHtml(o)}</span>
+              <span>${pct}%</span>
+            </div>
+            <div style="height:8px;background:var(--off2);border-radius:100px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:${isCorrect?'var(--theme-g)':'var(--off2)'};border:${isCorrect?'none':'1px solid var(--border2)'};border-radius:100px;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${v}명</div>
+          </div>`;}).join('')}
+      </div>`;
+    });
+    if (!qs.length) html = '<div style="text-align:center;color:var(--muted);padding:24px;">퀴즈 결과가 없어요.</div>';
+  }
+
+  if (isHostView) {
+    html += `<div style="margin-top:16px;text-align:center;">
+      <button onclick="hideActivityShare()" style="padding:10px 24px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-weight:800;cursor:pointer;font-family:var(--font);color:var(--text);">공유 종료</button>
+    </div>`;
+  } else {
+    html += `<div style="margin-top:14px;padding:10px 14px;background:var(--theme-l);border-radius:10px;font-size:12px;color:var(--theme-a);font-weight:800;text-align:center;">📺 발표자가 결과를 공유 중이에요</div>`;
+  }
+
+  box.innerHTML = html;
+  ov.style.display = 'flex';
+}
+
+// ============================================================
+//  📊 만족도 종합 브리프 (호스트 전용)
+// ============================================================
+function showRatingSummary() {
+  const box = document.getElementById('ratingSummaryContent');
+  const ov = document.getElementById('ratingSummaryOverlay');
+  if (!box || !ov) return;
+
+  const ids = Object.keys(ratingItemsById || {}).sort((a,b)=>((ratingItemsById[a]?.order??0)-(ratingItemsById[b]?.order??0)));
+  if (!ids.length) { alert('아직 문항이 없어요.'); return; }
+
+  const allVotes = ids.flatMap(id => Array.isArray(ratingVotesById[id]) ? ratingVotesById[id] : []);
+  const overallAvg = allVotes.length ? (allVotes.reduce((a,b)=>a+b,0)/allVotes.length).toFixed(1) : '—';
+  const totalRespondents = allVotes.length;
+
+  // 전체 요약 카드
+  let html = `<div style="background:var(--theme-l);border-radius:18px;padding:18px 22px;margin-bottom:22px;">
+    <div style="font-size:12px;font-weight:900;color:var(--theme-a);letter-spacing:1px;margin-bottom:10px;">📌 전체 요약</div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:48px;font-weight:900;color:var(--theme-a);line-height:1;">${overallAvg}</div>
+        <div style="font-size:12px;color:var(--muted);font-weight:800;margin-top:4px;">전체 평균</div>
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <div style="display:flex;gap:16px;margin-bottom:8px;">
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--text);">${ids.length}</div><div style="font-size:11px;color:var(--muted);">문항 수</div></div>
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--text);">${totalRespondents}</div><div style="font-size:11px;color:var(--muted);">총 응답</div></div>
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:${parseFloat(overallAvg)>=4?'#22a05a':parseFloat(overallAvg)>=3?'#f59e0b':'#e05050'};">${parseFloat(overallAvg)>=4?'😊':parseFloat(overallAvg)>=3?'😐':'😕'}</div><div style="font-size:11px;color:var(--muted);">종합 평가</div></div>
+        </div>
+        ${[5,4,3,2,1].map(s=>{const cnt=allVotes.filter(v=>v===s).length;const pct=allVotes.length?Math.round(cnt/allVotes.length*100):0;
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:12px;width:12px;font-weight:800;color:var(--theme-a);">${s}</span>
+            <div style="flex:1;height:7px;background:rgba(0,0,0,0.08);border-radius:4px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:var(--theme-g);border-radius:4px;"></div>
+            </div>
+            <span style="font-size:11px;color:var(--muted);width:50px;">${cnt}명 (${pct}%)</span>
+          </div>`;}).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // 문항별 결과
+  html += `<div style="font-size:12px;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:12px;">📋 문항별 결과</div>`;
+  ids.forEach((id, idx) => {
+    const it = ratingItemsById[id] || {};
+    const votes = Array.isArray(ratingVotesById[id]) ? ratingVotesById[id] : [];
+    const avg = votes.length ? (votes.reduce((a,b)=>a+b,0)/votes.length).toFixed(1) : '—';
+    const g = iconGlyph(it.icon || 'star');
+    const isActive = id === activeRatingId;
+    const avgNum = parseFloat(avg);
+    const sentiment = isNaN(avgNum) ? '—' : avgNum >= 4.2 ? '매우 좋음' : avgNum >= 3.5 ? '좋음' : avgNum >= 2.5 ? '보통' : '개선 필요';
+    const sentColor = isNaN(avgNum) ? 'var(--muted)' : avgNum >= 4.2 ? '#22a05a' : avgNum >= 3.5 ? '#0ea5e9' : avgNum >= 2.5 ? '#f59e0b' : '#e05050';
+
+    html += `<div style="border:1.5px solid ${isActive?'var(--theme-a)':'var(--border)'};border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--surface-card);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${isActive?'<span style="background:var(--theme-a);color:#fff;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;">현재</span>':''}
+          <span style="font-weight:900;font-size:14px;">Q${idx+1}. ${escapeHtml(it.title||'문항')}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;font-weight:800;color:${sentColor};background:${sentColor}18;padding:3px 10px;border-radius:100px;">${sentiment}</span>
+          <span style="font-size:26px;font-weight:900;color:var(--theme-a);">${avg}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:10px;">${Array.from({length:5},(_,i)=>`<span style="font-size:22px;opacity:${i<Math.round(avgNum)?1:0.2}">${g}</span>`).join('')}</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;height:60px;margin-bottom:6px;">
+        ${[1,2,3,4,5].map(s=>{const cnt=votes.filter(v=>v===s).length;const pct=votes.length?Math.round(cnt/votes.length*100):0;const h=Math.max(4,pct*0.55);
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <span style="font-size:9px;color:var(--muted);">${cnt}</span>
+            <div style="width:100%;height:${h}px;background:var(--theme-g);border-radius:3px 3px 0 0;"></div>
+            <span style="font-size:10px;color:var(--muted);font-weight:700;">${s}</span>
+          </div>`;}).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;">${votes.length}명 응답</div>
+    </div>`;
+  });
+
+  // 결론
+  const conclusion = allVotes.length === 0 ? '아직 응답 데이터가 없어요.' :
+    parseFloat(overallAvg) >= 4.5 ? `전체적으로 매우 높은 만족도(${overallAvg}점)를 보여요. 훌륭한 세션이었어요! 🎉` :
+    parseFloat(overallAvg) >= 3.5 ? `전반적으로 긍정적인 평가(${overallAvg}점)를 받았어요. 몇 가지 개선 포인트를 참고해보세요.` :
+    parseFloat(overallAvg) >= 2.5 ? `평균(${overallAvg}점)으로 평가됐어요. 다음 세션에서 개선할 부분을 검토해보세요.` :
+    `기대에 미치지 못한 세션(${overallAvg}점)이었어요. 참여자 피드백을 꼭 확인해보세요.`;
+
+  html += `<div style="background:var(--off2);border-radius:14px;padding:14px 16px;margin-top:4px;">
+    <div style="font-size:12px;font-weight:900;color:var(--muted);margin-bottom:6px;">💡 종합 결론</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.6;">${conclusion}</div>
+  </div>`;
+
+  box.innerHTML = html;
+  ov.style.display = 'flex';
+}
+
 function showQAShowOverlay(payload){
   const ov = document.getElementById('qaShowOverlay');
   const box = document.getElementById('qaShowContent');
@@ -3062,7 +3341,7 @@ function ensureRatingSeedLocal() {
   if (keys.length) return;
 
   const id = 'r1';
-  ratingItemsById[id] = { title: '오늘 세션은 어땠나요?', icon: 'star' };
+  ratingItemsById[id] = { title: '오늘 세션은 어땠나요?', icon: 'star', order: 0 };
   activeRatingId = id;
   ratingVotesById[id] = ratingVotesById[id] || [];
 }
@@ -3074,7 +3353,7 @@ async function ensureRatingSeedFirebase() {
   if (items && Object.keys(items).length) return;
 
   const id = 'r1';
-  const seed = { [id]: { title: '오늘 세션은 어땠나요?', icon: 'star' } };
+  const seed = { [id]: { title: '오늘 세션은 어땠나요?', icon: 'star', order: 0 } };
   await fbSet('ratingItems', seed);
   await fbSet('ratingVotes', {});
   await fbSet('ratingActiveId', id);
@@ -3132,6 +3411,9 @@ function renderRatingEditList() {
     box.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:10px 0;">아직 문항이 없어요. 아래에서 추가해 주세요.</div>`;
     return;
   }
+
+  // order 필드 기준으로 정렬 (order 없는 항목은 0으로 처리)
+  ids.sort((a, b) => ((ratingItemsById[a]?.order ?? 0) - (ratingItemsById[b]?.order ?? 0)));
 
   box.innerHTML = ids.map((id, idx) => {
     const it = ratingItemsById[id] || {};
@@ -3199,7 +3481,9 @@ function newRatingId() {
 
 async function addRatingItem() {
   const id = newRatingId();
-  const item = { title: `새 문항 ${Object.keys(ratingItemsById||{}).length + 1}`, icon: 'star' };
+  // 현재 최대 order 값 + 1로 맨 뒤에 추가
+  const maxOrder = Object.values(ratingItemsById || {}).reduce((m, it) => Math.max(m, it.order ?? 0), -1);
+  const item = { title: `새 문항 ${Object.keys(ratingItemsById||{}).length + 1}`, icon: 'star', order: maxOrder + 1 };
 
   if (db && roomCode) {
     await ensureRatingSeedFirebase();
@@ -3233,7 +3517,8 @@ async function saveRatingItem(id) {
 async function duplicateRatingItem(id) {
   const src = ratingItemsById[id] || { title: '복제 문항', icon: 'star' };
   const nid = newRatingId();
-  const item = { title: (src.title || '복제 문항') + ' (복제)', icon: src.icon || 'star' };
+  const maxOrder = Object.values(ratingItemsById || {}).reduce((m, it) => Math.max(m, it.order ?? 0), -1);
+  const item = { title: (src.title || '복제 문항') + ' (복제)', icon: src.icon || 'star', order: maxOrder + 1 };
 
   if (db && roomCode) {
     await db.ref(fbPath(`ratingItems/${nid}`)).set(item);
@@ -3408,8 +3693,11 @@ function attachRatingListeners() {
 
   fbOn('ratingItems', 'value', s => {
     ratingItemsById = s.val() || {};
-    // active id가 아직 없으면 첫 문항 자동 선택
-    if (!activeRatingId) activeRatingId = Object.keys(ratingItemsById)[0] || null;
+    // active id가 아직 없으면 order 기준 첫 문항 자동 선택
+    if (!activeRatingId) {
+      const sortedIds = Object.keys(ratingItemsById).sort((a, b) => ((ratingItemsById[a]?.order ?? 0) - (ratingItemsById[b]?.order ?? 0)));
+      activeRatingId = sortedIds[0] || null;
+    }
     renderRatingEditList();
     updateRatingPreview();
   });
@@ -4381,6 +4669,10 @@ async function submitParticipantSlider() {
 // ── 참여자 만족도 제출 ──
 async function submitParticipantRating() {
   if (!pSelectedRating) { alert('별점을 선택해 주세요.'); return; }
+  // 버튼 비활성화
+  const submitArea = document.getElementById('pRatingSubmitArea');
+  if (submitArea) submitArea.innerHTML = '<div style="font-size:13px;color:var(--muted);margin-top:14px;">제출 중...</div>';
+
   if (db && roomCode) {
     const id = activeRatingId || 'r1';
     await db.ref(`sessions/${roomCode}/ratingVotes/${id}`).transaction(arr => {
@@ -4391,7 +4683,20 @@ async function submitParticipantRating() {
   }
   pMyResponses.push({type:'만족도',content:pSelectedRating+'점',time:new Date().toLocaleTimeString()});
   renderMyResponses();
-  showSubmitSuccess('만족도 응답이 제출됐어요! ⭐');
+
+  // 완료 화면
+  const it = ratingItemsById[activeRatingId] || {};
+  const g = iconGlyph(it.icon || 'star');
+  document.getElementById('pContent').innerHTML = `
+    <div style="text-align:center;padding:28px 20px;">
+      <div style="font-size:48px;margin-bottom:10px;">✅</div>
+      <div style="font-size:18px;font-weight:800;color:var(--theme-a);margin-bottom:8px;">제출 완료!</div>
+      <div style="display:flex;justify-content:center;gap:6px;margin-bottom:10px;font-size:32px;">
+        ${Array.from({length:5},(_,i)=>`<span style="opacity:${i<pSelectedRating?1:0.2}">${g}</span>`).join('')}
+      </div>
+      <div style="font-size:14px;font-weight:800;color:var(--text);">${ratingEmoji[pSelectedRating]} ${ratingWord[pSelectedRating]}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">응답이 전달됐어요. 감사합니다! 🙏</div>
+    </div>`;
 }
 
 // ── btn-primary 클래스 (Q&A 발표자 버튼) ──
@@ -4613,6 +4918,28 @@ window.addEventListener('load', loadAppState);
           <button class="small-btn primary" onclick="submitParticipantQA()">보내기</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ── 활동 결과 공유 오버레이 (참여자/스크린 공용) ── -->
+  <div id="activityShareOverlay" style="display:none;position:fixed;inset:0;z-index:270;background:rgba(10,12,16,.60);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:18px;">
+    <div style="background:var(--surface-card);border:1px solid var(--border);border-radius:22px;max-width:720px;width:100%;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.35);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-weight:950;" id="activityShareTitle">📺 결과 공유</div>
+        <button class="small-btn" onclick="hideActivityShare()">닫기 ✕</button>
+      </div>
+      <div id="activityShareContent" style="padding:20px;max-height:75vh;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ── 만족도 종합 브리프 오버레이 ── -->
+  <div id="ratingSummaryOverlay" style="display:none;position:fixed;inset:0;z-index:270;background:rgba(10,12,16,.60);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:18px;">
+    <div style="background:var(--surface-card);border:1px solid var(--border);border-radius:22px;max-width:680px;width:100%;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.35);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-weight:950;">📊 만족도 종합 브리프</div>
+        <button class="small-btn" onclick="document.getElementById('ratingSummaryOverlay').style.display='none'">닫기 ✕</button>
+      </div>
+      <div id="ratingSummaryContent" style="padding:20px;max-height:78vh;overflow-y:auto;"></div>
     </div>
   </div>
 
