@@ -1941,12 +1941,20 @@ body.ui-dark #screen-participant { background: var(--off); }
       <textarea id="qaQuickInput" placeholder="질문을 입력하세요" style="flex:1;min-width:220px;min-height:44px;max-height:120px;resize:vertical;padding:10px 12px;border-radius:14px;border:1px solid #ddd;font-family:inherit;font-weight:700;outline:none;"></textarea>
       <button id="qaQuickSend" onclick="submitQuickQA()" style="border:none;background:var(--theme-a);color:#fff;border-radius:14px;padding:12px 14px;font-weight:900;cursor:pointer;min-width:92px;">보내기</button>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:10px;flex-wrap:wrap;">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#333;">
-        <input type="checkbox" id="qaAnonToggle" />
-        익명으로 보내기
-      </label>
-      <div style="font-size:12px;color:#666;font-weight:800;">발표자는 실시간으로 질문을 확인할 수 있어요.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-size:11px;font-weight:900;color:#666;margin-right:2px;">보내기 방식</span>
+        <button id="qaToggleNick" onclick="setQAMode('nick')"
+          style="padding:5px 13px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--theme-a);background:var(--theme-a);color:#fff;cursor:pointer;transition:all 0.15s;">
+          👤 닉네임
+        </button>
+        <button id="qaToggleAnon" onclick="setQAMode('anon')"
+          style="padding:5px 13px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid #ccc;background:#f5f5f5;color:#888;cursor:pointer;transition:all 0.15s;">
+          🕵️ 익명
+        </button>
+        <input type="hidden" id="qaAnonToggle" value="nick">
+      </div>
+      <div style="font-size:11px;color:#888;font-weight:800;">발표자는 실시간으로 확인해요.</div>
     </div>
   </div>
 </div>
@@ -4446,10 +4454,22 @@ function updateParticipantView(act) {
       <input type="text" class="form-input" id="pWcInput" placeholder="단어 입력..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') submitParticipantWord()">
       ${submitBtn('단어 제출하기', 'submitParticipantWord()')}`;
   } else if (act === 'qa') {
-    pTitle.textContent = 'Q&A — 익명 질문';
+    pTitle.textContent = 'Q&A';
     pContent.innerHTML = `
-      <div style="margin-bottom:8px;font-size:13px;color:var(--muted);">궁금한 점을 자유롭게 질문하세요. 익명으로 전달됩니다.</div>
+      <div style="margin-bottom:10px;font-size:13px;color:var(--muted);">질문을 입력하고 보내기 방식을 선택해 제출하세요.</div>
       <textarea class="form-input form-textarea" id="pQaInput" placeholder="질문을 입력하세요..." style="min-height:120px;"></textarea>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:12px;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:900;color:var(--muted);">보내기 방식</span>
+        <button id="pQaToggleNick" onclick="setPQAMode('nick')"
+          style="padding:5px 14px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--theme-a);background:var(--theme-a);color:#fff;cursor:pointer;transition:all 0.15s;">
+          👤 닉네임
+        </button>
+        <button id="pQaToggleAnon" onclick="setPQAMode('anon')"
+          style="padding:5px 14px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--border2);background:var(--off);color:var(--muted);cursor:pointer;transition:all 0.15s;">
+          🕵️ 익명
+        </button>
+        <input type="hidden" id="pQaAnonMode" value="nick">
+      </div>
       ${submitBtn('질문 제출하기', 'submitParticipantQA()')}`;
   } else if (act === 'rating') {
     pTitle.textContent = '만족도 체크';
@@ -4525,37 +4545,76 @@ async function submitParticipantWord() {
   showSubmitSuccess(`"${w.replace(/_/g,' ')}" 등록 완료!`);
 }
 
+// ── QA 모드 토글 함수들 ──
+function setQAMode(mode) {
+  document.getElementById('qaAnonToggle').value = mode;
+  const nick = document.getElementById('qaToggleNick');
+  const anon = document.getElementById('qaToggleAnon');
+  if (!nick || !anon) return;
+  if (mode === 'nick') {
+    nick.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    anon.style.cssText += ';border-color:#ccc;background:#f5f5f5;color:#888;';
+  } else {
+    anon.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    nick.style.cssText += ';border-color:#ccc;background:#f5f5f5;color:#888;';
+  }
+}
+
+function setQAModalMode(mode) {
+  document.getElementById('qaModalAnon').value = mode;
+  const nick = document.getElementById('qaModalToggleNick');
+  const anon = document.getElementById('qaModalToggleAnon');
+  if (!nick || !anon) return;
+  if (mode === 'nick') {
+    nick.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    anon.style.cssText += ';border-color:var(--border2);background:var(--off);color:var(--muted);';
+  } else {
+    anon.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    nick.style.cssText += ';border-color:var(--border2);background:var(--off);color:var(--muted);';
+  }
+}
+
+function setPQAMode(mode) {
+  document.getElementById('pQaAnonMode').value = mode;
+  const nick = document.getElementById('pQaToggleNick');
+  const anon = document.getElementById('pQaToggleAnon');
+  if (!nick || !anon) return;
+  if (mode === 'nick') {
+    nick.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    anon.style.cssText += ';border-color:var(--border2);background:var(--off);color:var(--muted);';
+  } else {
+    anon.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    nick.style.cssText += ';border-color:var(--border2);background:var(--off);color:var(--muted);';
+  }
+}
+
 async function submitParticipantQA(){
   if(!FIREBASE_READY || !roomCode){ alert('연결이 필요해요.'); return; }
 
-  // Prefer modal input if exists
   const modalInput = document.getElementById('qaModalInput');
   const inlineInput = document.getElementById('pQaInput');
   const txt = ((modalInput && modalInput.value) ? modalInput.value : (inlineInput ? inlineInput.value : '')).trim();
-
   if(!txt){ alert('질문을 입력해 주세요.'); return; }
 
-  const anon = !!document.getElementById('qaModalAnon')?.checked || !!document.getElementById('qaAnonToggle')?.checked;
+  // 모드 감지 — hidden input value 기반 (기본값 'nick')
+  const modalMode = document.getElementById('qaModalAnon')?.value || 'nick';
+  const pQaMode   = document.getElementById('pQaAnonMode')?.value || 'nick';
+  const isAnon = (modalInput && modalInput.value) ? (modalMode === 'anon') : (pQaMode === 'anon');
 
-  // nickname is set when joining; fallback to participantNickname if present
-  const nickVal = (typeof nickname !== 'undefined' && nickname) ? nickname : (typeof participantNickname !== 'undefined' ? participantNickname : '');
-  const author = anon ? '익명' : (nickVal || '익명');
+  const nickVal = (typeof participantNickname !== 'undefined' ? participantNickname : '') || '익명';
+  const author = isAnon ? '익명' : nickVal;
 
-  // Button lock to avoid "안 눌리는 것처럼" 보이는 중복클릭/연타 이슈 방지
   const primaryBtn = document.querySelector('#qaModal .small-btn.primary');
   if(primaryBtn){ primaryBtn.disabled = true; primaryBtn.style.opacity = '0.6'; }
 
   try{
     const payload = { q: txt, author, votes: 0, answered: false, ts: Date.now() };
     await db.ref(`sessions/${roomCode}/qa`).push(payload);
-
     if(modalInput) modalInput.value = '';
     if(inlineInput) inlineInput.value = '';
-
     const m = document.getElementById('qaModal');
     if(m && m.style.display !== 'none') closeParticipantQAModal();
-
-    try{ alert('질문을 보냈어요!'); }catch(e){}
+    showSubmitSuccess('질문을 보냈어요! 💬');
   }catch(err){
     alert('질문 전송 중 오류가 발생했어요. 다시 시도해 주세요.');
     console.warn(err);
@@ -4564,7 +4623,35 @@ async function submitParticipantQA(){
   }
 }
 
-/* Title in top bar */
+async function submitQuickQA(){
+  if(!roomCode){ alert('세션에 먼저 참여해 주세요.'); return; }
+  const input = document.getElementById('qaQuickInput');
+  const txt = (input?.value||'').trim();
+  if(!txt){ alert('질문을 입력해 주세요.'); return; }
+
+  // hidden input value로 모드 감지
+  const mode = document.getElementById('qaAnonToggle')?.value || 'nick';
+  const isAnon = mode === 'anon';
+  const nickVal = (typeof participantNickname !== 'undefined' ? participantNickname : '') || '익명';
+  const nickToSend = isAnon ? '익명' : nickVal;
+  const payload = { q: txt, author: nickToSend, nick: nickToSend, ts: Date.now(), votes: 0 };
+
+  if(!FIREBASE_READY || !db){
+    try{
+      const key = 'actively_local_qa_'+roomCode;
+      const arr = JSON.parse(localStorage.getItem(key)||'[]');
+      arr.push(payload);
+      localStorage.setItem(key, JSON.stringify(arr.slice(-50)));
+    }catch(e){}
+    if(input) input.value='';
+    try{ alert('데모 모드라 이 기기에서만 저장됐어요. (Firebase 연결 시 실시간 전송)'); }catch(e){}
+    return;
+  }
+
+  await db.ref(`sessions/${roomCode}/qa`).push(payload);
+  if(input) input.value='';
+  showSubmitSuccess('질문을 보냈어요! 💬');
+}
 function setTopTitle(t){
   const el = document.getElementById('sessionTitleTop');
   const banner = document.getElementById('hostTitleBanner');
@@ -4596,35 +4683,6 @@ function setParticipantSessionTitle(t){
   const bannerText=document.getElementById('pSessionTitleBannerText');
   if(banner&&bannerText){bannerText.textContent=title;banner.style.display=title?'block':'none';}
 }
-
-async function submitQuickQA(){
-  if(!roomCode){ alert('세션에 먼저 참여해 주세요.'); return; }
-  const input = document.getElementById('qaQuickInput');
-  const anon = document.getElementById('qaAnonToggle')?.checked;
-  const txt = (input?.value||'').trim();
-  if(!txt){ alert('질문을 입력해 주세요.'); return; }
-  const nickToSend = anon ? '익명' : (nickname || '익명');
-  const payload = { q: txt, nick: nickToSend, ts: Date.now(), votes: 0 };
-
-  if(!FIREBASE_READY || !db){
-    // Demo/offline fallback: store locally so user doesn't feel blocked
-    try{
-      const key = 'actively_local_qa_'+roomCode;
-      const arr = JSON.parse(localStorage.getItem(key)||'[]');
-      arr.push(payload);
-      localStorage.setItem(key, JSON.stringify(arr.slice(-50)));
-    }catch(e){}
-    if(input) input.value='';
-    try{ alert('데모 모드라 이 기기에서만 저장됐어요. (Firebase 연결 시 실시간 전송)'); }catch(e){}
-    return;
-  }
-
-  await db.ref(`sessions/${roomCode}/qa`).push(payload);
-  if(input) input.value='';
-  try{ alert('질문을 보냈어요!'); }catch(e){}
-}
-
-
 
 // ============================================================
 //   MISSING FUNCTIONS — 버튼 동작을 위한 필수 함수들
@@ -5284,10 +5342,19 @@ window.addEventListener('load', loadAppState);
       <div style="padding:14px 16px;">
         <div style="font-size:12px;color:var(--muted);font-weight:900;margin-bottom:8px;">언제든 질문을 남길 수 있어요. 발표자에게 바로 전달됩니다.</div>
         <textarea id="qaModalInput" placeholder="질문을 입력하세요" style="width:100%;min-height:110px;resize:vertical;padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);font-family:var(--font);font-weight:850;outline:none;"></textarea>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;font-weight:900;color:var(--text);">
-          <input type="checkbox" id="qaModalAnon" /> 익명으로 보내기
-        </label>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+        <div style="display:flex;gap:6px;align-items:center;margin-top:12px;">
+          <span style="font-size:11px;font-weight:900;color:var(--muted);margin-right:2px;">보내기 방식</span>
+          <button id="qaModalToggleNick" onclick="setQAModalMode('nick')"
+            style="padding:5px 14px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--theme-a);background:var(--theme-a);color:#fff;cursor:pointer;transition:all 0.15s;">
+            👤 닉네임
+          </button>
+          <button id="qaModalToggleAnon" onclick="setQAModalMode('anon')"
+            style="padding:5px 14px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--border2);background:var(--off);color:var(--muted);cursor:pointer;transition:all 0.15s;">
+            🕵️ 익명
+          </button>
+          <input type="hidden" id="qaModalAnon" value="nick">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
           <button class="small-btn" onclick="closeParticipantQAModal()">취소</button>
           <button class="small-btn primary" onclick="submitParticipantQA()">보내기</button>
         </div>
