@@ -1370,6 +1370,7 @@ body.ui-dark #screen-participant { background: var(--off); }
       <button class="nav-tab" onclick="switchActivity('slider',this)">🎚️ 슬라이더</button>
       <button class="nav-tab" onclick="switchActivity('postit',this)">📝 포스트잇</button>
       <button class="nav-tab" onclick="switchActivity('bgm',this)">🎵 BGM</button>
+      <button class="nav-tab" onclick="switchActivity('standby',this)">📋 상시 폼</button>
     </div>
     <div class="nav-right">
       <div class="live-badge"><div class="live-dot-red"></div> LIVE</div>
@@ -1704,6 +1705,77 @@ body.ui-dark #screen-participant { background: var(--off); }
         </div>
       </div>
 
+      <!-- STANDBY — 상시 열린 활동 -->
+      <div class="activity-panel" id="ap-standby">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">🔓</div>
+            <div class="card-title">상시 열린 폼</div>
+            <span id="standbyBadge" style="font-size:10px;padding:3px 10px;border-radius:100px;background:var(--off2);color:var(--muted);font-weight:800;margin-left:auto;">비공개</span>
+          </div>
+          <div class="card-body">
+
+            <!-- 상단 설명 -->
+            <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:16px;padding:12px 14px;background:var(--theme-l);border-radius:12px;">
+              💡 <strong>관리자가 없어도</strong> 참여자가 언제든 접속해서 응답할 수 있는 폼이에요.<br>
+              구글 폼·패들릿처럼 활용하세요 — 링크 하나로 설문, 아이디어 수집, 자유 기록이 모두 가능해요.
+            </div>
+
+            <!-- 폼 기본 설정 -->
+            <div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--off);">
+              <div style="font-size:11px;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:12px;">⚙️ 폼 기본 설정</div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label">폼 제목 / 안내 문구</label>
+                <input type="text" id="standbyFormTitle" class="form-input" value="자유롭게 의견을 남겨주세요" placeholder="참여자에게 보여줄 제목">
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label">제출자 이름 방식</label>
+                <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+                  <button id="sbn-anon" onclick="setStandbyNameMode('anon')" style="padding:7px 16px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--theme-a);background:var(--theme-a);color:#fff;cursor:pointer;">🕵️ 완전 익명</button>
+                  <button id="sbn-optional" onclick="setStandbyNameMode('optional')" style="padding:7px 16px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--border);background:var(--off2);color:var(--muted);cursor:pointer;">👤 이름 선택 입력</button>
+                  <button id="sbn-required" onclick="setStandbyNameMode('required')" style="padding:7px 16px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--border);background:var(--off2);color:var(--muted);cursor:pointer;">✏️ 이름 필수 입력</button>
+                </div>
+                <input type="hidden" id="standbyNameMode" value="anon">
+                <div id="standbyNameModeDesc" style="font-size:11px;color:var(--muted);margin-top:6px;">참여자가 이름 없이 익명으로 제출해요.</div>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">복수 제출</label>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:800;">
+                    <input type="checkbox" id="standbyAllowMultiple" style="accent-color:var(--theme-a);">
+                    같은 사람이 여러 번 제출 허용
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- 문항 목록 -->
+            <div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:10px;">📋 문항</div>
+              <div id="standbyQList"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                <button class="btn-add-opt" onclick="addStandbyQ('text')" style="font-size:11px;">+ 주관식</button>
+                <button class="btn-add-opt" onclick="addStandbyQ('multiple')" style="font-size:11px;">+ 객관식</button>
+                <button class="btn-add-opt" onclick="addStandbyQ('scale')" style="font-size:11px;">+ 척도</button>
+                <button class="btn-add-opt" onclick="addStandbyQ('board')" style="font-size:11px;">+ 자유 기록판</button>
+              </div>
+            </div>
+
+            <!-- 활성화 + 응답 보기 -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+              <button class="btn-launch" onclick="publishStandbyForm()" id="standbyPublishBtn">🔓 폼 공개 (참여자 열람 허용)</button>
+              <button class="btn-outline" onclick="unpublishStandbyForm()" id="standbyUnpublishBtn" style="display:none;">🔒 폼 비공개</button>
+              <button class="btn-outline" onclick="loadStandbyResponses()">📊 응답 보기</button>
+              <button class="btn-outline" onclick="clearStandbyResponses()" style="color:#b03030;border-color:#ffb3b3;">🗑 응답 초기화</button>
+            </div>
+
+            <!-- 응답 뷰 -->
+            <div id="standbyResponseView"></div>
+
+          </div>
+        </div>
+      </div>
+
       <!-- RATING -->
       <div class="activity-panel" id="ap-rating">
         <div class="card">
@@ -1874,6 +1946,7 @@ body.ui-dark #screen-participant { background: var(--off); }
     <button class="mob-tab-btn" id="mobt-slider"     onclick="switchActivity('slider',this);setMobActive('slider')">   <span>🎚️</span>슬라이더</button>
     <button class="mob-tab-btn" id="mobt-postit"     onclick="switchActivity('postit',this);setMobActive('postit')">   <span>📝</span>포스트잇</button>
     <button class="mob-tab-btn" id="mobt-bgm"        onclick="switchActivity('bgm',this);setMobActive('bgm')">         <span>🎵</span>BGM</button>
+    <button class="mob-tab-btn" id="mobt-standby"   onclick="switchActivity('standby',this);setMobActive('standby')"> <span>📋</span>상시폼</button>
     <button class="mob-tab-btn" id="mobt-qr"         onclick="openQRModal()">                                           <span>📱</span>QR</button>
   </nav>
 </div>
@@ -1943,10 +2016,76 @@ body.ui-dark #screen-participant { background: var(--off); }
   </div>
   <div class="participant-body">
     <div class="p-context-label" id="pContextLabel">🎓 강의/교육</div>
-    <div class="p-card">
+
+    <!-- ── 탭 바 ── -->
+    <div id="pTabBar" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;background:var(--surface-card);border-radius:16px 16px 0 0;overflow:hidden;">
+      <button id="pTab-live" onclick="switchPTab('live')"
+        style="flex:1;padding:12px 6px;border:none;background:var(--theme-a);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+        🎯 현재 활동
+      </button>
+      <button id="pTab-board" onclick="switchPTab('board')"
+        style="flex:1;padding:12px 6px;border:none;background:var(--off);color:var(--muted);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+        📌 자유 기록판
+      </button>
+      <button id="pTab-survey" onclick="switchPTab('survey')"
+        style="flex:1;padding:12px 6px;border:none;background:var(--off);color:var(--muted);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.15s;display:none;">
+        📋 상시 폼
+      </button>
+    </div>
+
+    <!-- ── 탭 1: 현재 활동 ── -->
+    <div id="pPanel-live" class="p-card" style="border-radius:0 0 16px 16px;margin-top:0;">
       <div class="p-title" id="pTitle">진행 중인 활동</div>
       <div id="pContent"></div>
     </div>
+
+    <!-- ── 탭 2: 자유 기록판 ── -->
+    <div id="pPanel-board" style="display:none;">
+      <div class="p-card" style="border-radius:0 0 16px 16px;margin-top:0;">
+        <div class="p-title">📌 자유 기록판</div>
+        <div id="pBoardPrompt" style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">자유롭게 아이디어, 메모, 질문을 남겨보세요.</div>
+        <textarea id="pBoardInput" class="form-input form-textarea" style="min-height:90px;" placeholder="여기에 자유롭게 입력하세요..."></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+          <div style="display:flex;gap:6px;align-items:center;flex:1;">
+            <button id="pBoardToggleNick" onclick="setPBoardMode('nick')"
+              style="padding:5px 12px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--theme-a);background:var(--theme-a);color:#fff;cursor:pointer;">
+              👤 닉네임
+            </button>
+            <button id="pBoardToggleAnon" onclick="setPBoardMode('anon')"
+              style="padding:5px 12px;border-radius:100px;font-size:12px;font-weight:800;border:1.5px solid var(--border2);background:var(--off);color:var(--muted);cursor:pointer;">
+              🕵️ 익명
+            </button>
+            <input type="hidden" id="pBoardAnonMode" value="nick">
+          </div>
+          <button onclick="submitPBoard()" style="padding:10px 20px;border-radius:12px;border:none;background:var(--theme-g);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📌 붙이기</button>
+        </div>
+        <div id="pBoardWall" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;min-height:60px;"></div>
+      </div>
+    </div>
+
+    <!-- ── 탭 3: 상시 폼 ── -->
+    <div id="pPanel-survey" style="display:none;">
+      <div class="p-card" style="border-radius:0 0 16px 16px;margin-top:0;padding:0;">
+        <!-- 폼 헤더 -->
+        <div style="padding:20px 18px 14px;border-bottom:1px solid var(--border);">
+          <div class="p-title" id="pFormTitle" style="margin-bottom:6px;">📋 상시 폼</div>
+          <div id="pFormDesc" style="font-size:13px;color:var(--muted);line-height:1.6;"></div>
+        </div>
+        <!-- 이름 입력 영역 (설정에 따라 표시) -->
+        <div id="pFormNameArea" style="display:none;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--off);">
+          <label style="font-size:11px;font-weight:900;color:var(--muted);display:block;margin-bottom:6px;">이름 / 닉네임</label>
+          <input type="text" id="pFormNameInput" class="form-input" placeholder="이름을 입력하세요" style="margin-bottom:0;">
+          <div id="pFormNameHint" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+        </div>
+        <!-- 문항들 -->
+        <div id="pFormQuestions" style="padding:14px 18px;"></div>
+        <!-- 제출 버튼 -->
+        <div style="padding:0 18px 20px;">
+          <button id="pFormSubmitBtn" onclick="submitStandbyForm()" style="width:100%;padding:15px;border-radius:14px;border:none;background:var(--theme-g);color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.12);">✅ 제출하기</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <div id="myResponsesPanel" style="display:none;margin:0 16px 12px;padding:12px 14px;background:var(--off);border-radius:14px;border:1px solid var(--border);"></div>
@@ -2182,6 +2321,9 @@ async function initHostSession(c, initialAct) {
       updateCount('cnt-postit', Object.keys(postitData).length);
     });
 
+    // 상시 열린 활동 리스너
+    attachStandbyListeners();
+
     db.ref('.info/connected').on('value', s=>setFbStatus(s.val()?'connected':'offline'));
     setFbStatus('connected');
     addFeed('🔥 Firebase 실시간 연결됨', '#22c55e');
@@ -2271,6 +2413,9 @@ async function joinSessionFirebase(code) {
       const pTitle=document.getElementById('pTitle');
       if(pTitle && pTitle.textContent==='슬라이더 응답') updateParticipantView('slider');
     });
+
+    // 참여자: 상시 열린 활동 탭 표시 제어
+    attachParticipantStandbyListeners(code);
 
     // 투표 실시간 리스너
     db.ref(`sessions/${code}/poll`).on('value', s=>{
@@ -2790,7 +2935,7 @@ function switchActivity(act,btn){
   if(panel) panel.classList.add('active');
   document.querySelectorAll('.act-btn,.nav-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  const acts=['poll','wordcloud','qa','quiz','rating','slider','postit','bgm'];
+  const acts=['poll','wordcloud','qa','quiz','rating','slider','postit','bgm','standby'];
   const idx=acts.indexOf(act);
   const actBtns=document.querySelectorAll('#actNav .act-btn');
   if(actBtns[idx]) actBtns[idx].classList.add('active');
@@ -2802,6 +2947,10 @@ function switchActivity(act,btn){
   if(act==='slider'){
     if(db && roomCode) ensureSliderSeedFirebase().then(()=>renderSliderEditList());
     else { ensureSliderSeedLocal(); renderSliderEditList(); renderSliderActivePreview(); }
+  }
+  if(act==='standby'){
+    renderStandbyEditor();
+    renderStandbyResponseView();
   }
   if(act==='bgm'){
     initBGMPresets();
@@ -3006,6 +3155,16 @@ async function shareActivityResult(type) {
       icon: ratingItemsById[id]?.icon || 'star',
       votes: ratingVotesById[id] || []
     }));
+  } else if (type === 'board') {
+    if (db && roomCode) {
+      const snap = await db.ref(fbPath('freeBoard/posts')).once('value');
+      const posts = Object.values(snap.val() || {});
+      const promptSnap = await db.ref(fbPath('freeBoard/prompt')).once('value');
+      payload.posts = posts;
+      payload.prompt = promptSnap.val() || '자유 기록판';
+    } else {
+      payload.posts = [];
+    }
   } else if (type === 'postit') {
     payload.postits = Object.values(postitData || {});
     payload.q = document.getElementById('postitQ')?.value || '';
@@ -3123,6 +3282,24 @@ function renderActivityShareOverlay(payload, isHostView) {
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">${votes.length}명 응답</div>
       </div>`;
     });
+  } else if (payload.type === 'board') {
+    titleEl.textContent = '📌 자유 기록판';
+    const items = payload.posts || [];
+    if (payload.prompt) html = `<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:16px;padding:10px 14px;background:var(--theme-l);border-radius:10px;">📌 ${escapeHtml(payload.prompt)}</div>`;
+    if (!items.length) { html += '<div style="text-align:center;color:var(--muted);padding:24px;">아직 기록이 없어요.</div>'; }
+    else {
+      html += `<div style="display:flex;flex-wrap:wrap;gap:12px;">`;
+      items.forEach((p, i) => {
+        const colors = [{bg:'#fff9c4',txt:'#7a6000'},{bg:'#c8f7c5',txt:'#1a5c2a'},{bg:'#d6eaff',txt:'#0a3d8c'},{bg:'#ffd6e0',txt:'#8c1a3a'},{bg:'#e8d5ff',txt:'#4a1a8c'},{bg:'#ffe0cc',txt:'#8c3a00'}];
+        const c = colors[i % colors.length];
+        const rot = ((i*7+3)%7-3);
+        html += `<div style="width:148px;min-height:120px;border-radius:4px 14px 14px 14px;padding:14px 12px 10px;font-size:13px;font-weight:600;line-height:1.5;box-shadow:3px 4px 12px rgba(0,0,0,0.13);background:${c.bg};color:${c.txt};transform:rotate(${rot}deg);display:flex;flex-direction:column;justify-content:space-between;word-break:break-word;">
+          <div>${escapeHtml(p.text||'')}</div>
+          <div style="font-size:11px;font-weight:800;opacity:0.6;margin-top:8px;">— ${escapeHtml(p.nickname||'익명')}</div>
+        </div>`;
+      });
+      html += `</div><div style="margin-top:14px;padding:10px 14px;background:var(--off);border-radius:10px;font-size:12px;color:var(--muted);font-weight:800;">총 ${items.length}개 기록</div>`;
+    }
   } else if (payload.type === 'postit') {
     titleEl.textContent = '📝 포스트잇 결과';
     const items = payload.postits || [];
@@ -4562,6 +4739,439 @@ function renderPostitBoard() {
   }).join('');
   updateCount('cnt-postit',items.length);
 }
+
+// ============================================================
+//   STANDBY — 상시 열린 폼 (관리자 부재 가능, 설문/기록판 통합)
+// ============================================================
+let standbySurveyQuestions = [];
+let standbySurveyActive = false;
+let standbyNameMode = 'anon'; // 'anon' | 'optional' | 'required'
+
+// ── 이름 방식 선택 ──
+function setStandbyNameMode(mode) {
+  standbyNameMode = mode;
+  document.getElementById('standbyNameMode').value = mode;
+  const descs = {
+    anon: '참여자가 이름 없이 익명으로 제출해요.',
+    optional: '이름 입력란이 표시되지만 비워도 제출할 수 있어요.',
+    required: '이름을 반드시 입력해야 제출할 수 있어요.'
+  };
+  const el = document.getElementById('standbyNameModeDesc');
+  if (el) el.textContent = descs[mode] || '';
+  ['anon','optional','required'].forEach(m => {
+    const btn = document.getElementById(`sbn-${m}`);
+    if (!btn) return;
+    const active = m === mode;
+    btn.style.borderColor = active ? 'var(--theme-a)' : 'var(--border)';
+    btn.style.background = active ? 'var(--theme-a)' : 'var(--off2)';
+    btn.style.color = active ? '#fff' : 'var(--muted)';
+  });
+}
+
+// ── 문항 추가 ──
+function addStandbyQ(type) {
+  type = type || 'text';
+  const id = 'sq' + Date.now();
+  if (type === 'board') {
+    standbySurveyQuestions.push({ id, type:'board', q:'자유롭게 아이디어, 메모, 의견을 남겨주세요.' });
+  } else if (type === 'multiple') {
+    standbySurveyQuestions.push({ id, type:'multiple', q:'질문을 입력하세요', opts:['선택지 A','선택지 B','선택지 C'] });
+  } else if (type === 'scale') {
+    standbySurveyQuestions.push({ id, type:'scale', q:'척도로 평가해 주세요 (1~5)' });
+  } else {
+    standbySurveyQuestions.push({ id, type:'text', q:'질문을 입력하세요' });
+  }
+  renderStandbyEditor();
+}
+
+// ── 에디터 렌더 ──
+function renderStandbyEditor() {
+  const box = document.getElementById('standbyQList'); if (!box) return;
+  if (!standbySurveyQuestions.length) {
+    box.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">아래 버튼으로 문항을 추가하세요.</div>';
+    return;
+  }
+  const typeIcons = {text:'✍️ 주관식', multiple:'📝 객관식', scale:'📊 척도(1~5)', board:'📌 자유기록판'};
+  box.innerHTML = standbySurveyQuestions.map((q, qi) => `
+    <div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--white);">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+        <span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:100px;background:var(--theme-l);color:var(--theme-a);">${typeIcons[q.type]||q.type}</span>
+        <input type="text" class="form-input" value="${escapeHtml(q.q)}" style="flex:1;font-size:13px;min-width:150px;"
+          onchange="standbySurveyQuestions[${qi}].q=this.value">
+        <button onclick="standbySurveyQuestions.splice(${qi},1);renderStandbyEditor()"
+          style="border:1px solid #ffb3b3;background:transparent;border-radius:8px;padding:4px 8px;color:#b03030;cursor:pointer;font-size:11px;">삭제</button>
+      </div>
+      ${q.type === 'multiple' ? `
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          ${(q.opts||[]).map((o, oi) => `
+            <div style="display:flex;gap:6px;align-items:center;">
+              <span style="font-size:11px;font-weight:800;color:var(--muted);width:16px;">${'ABCD'[oi]||oi+1}</span>
+              <input type="text" class="form-input" value="${escapeHtml(o)}" style="flex:1;font-size:12px;padding:6px 10px;"
+                onchange="standbySurveyQuestions[${qi}].opts[${oi}]=this.value">
+              <button onclick="standbySurveyQuestions[${qi}].opts.splice(${oi},1);renderStandbyEditor()"
+                style="border:none;background:transparent;color:var(--muted);cursor:pointer;">✕</button>
+            </div>`).join('')}
+          <button onclick="standbySurveyQuestions[${qi}].opts.push('새 선택지');renderStandbyEditor()"
+            class="btn-add-opt" style="margin-top:4px;font-size:11px;">+ 선택지 추가</button>
+        </div>` :
+      q.type === 'scale' ? `<div style="font-size:11px;color:var(--muted);">1점 ~ 5점 척도로 응답받아요.</div>` :
+      q.type === 'board' ? `<div style="font-size:11px;color:var(--muted);">참여자가 포스트잇처럼 자유롭게 남겨요. 여러 번 입력 가능해요.</div>` :
+      `<div style="font-size:11px;color:var(--muted);">참여자가 텍스트로 자유 응답해요.</div>`}
+    </div>`).join('');
+}
+
+// ── 폼 공개 ──
+async function publishStandbyForm() {
+  const title = document.getElementById('standbyFormTitle')?.value.trim() || '상시 폼';
+  const nameMode = document.getElementById('standbyNameMode')?.value || 'anon';
+  const allowMultiple = document.getElementById('standbyAllowMultiple')?.checked || false;
+  if (!standbySurveyQuestions.length) { alert('문항을 최소 1개 추가해 주세요.'); return; }
+  const formData = { title, nameMode, allowMultiple, questions: standbySurveyQuestions, published: true, updatedAt: Date.now() };
+  if (db && roomCode) {
+    await db.ref(fbPath('standbyForm')).set(formData);
+  }
+  standbySurveyActive = true;
+  updateStandbyBadge(true);
+  document.getElementById('standbyPublishBtn').style.display = 'none';
+  document.getElementById('standbyUnpublishBtn').style.display = '';
+  addFeed('상시 폼 공개됨 — 참여자 탭에 표시', 'var(--theme-a)');
+}
+
+async function unpublishStandbyForm() {
+  if (db && roomCode) await db.ref(fbPath('standbyForm/published')).set(false);
+  standbySurveyActive = false;
+  updateStandbyBadge(false);
+  document.getElementById('standbyPublishBtn').style.display = '';
+  document.getElementById('standbyUnpublishBtn').style.display = 'none';
+  addFeed('상시 폼 비공개', 'var(--muted)');
+}
+
+function updateStandbyBadge(active) {
+  const badge = document.getElementById('standbyBadge');
+  if (!badge) return;
+  badge.textContent = active ? '공개 중' : '비공개';
+  badge.style.background = active ? '#e6f7ee' : 'var(--off2)';
+  badge.style.color = active ? '#1a6b3a' : 'var(--muted)';
+}
+
+// ── 응답 보기 ──
+async function loadStandbyResponses() {
+  const box = document.getElementById('standbyResponseView'); if (!box) return;
+  if (!db || !roomCode) { box.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Firebase 연결 필요</div>'; return; }
+  box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0;">집계 중...</div>';
+  const [formSnap, respSnap] = await Promise.all([
+    db.ref(fbPath('standbyForm')).once('value'),
+    db.ref(fbPath('standbyFormResponses')).once('value')
+  ]);
+  const form = formSnap.val() || {};
+  const responses = Object.values(respSnap.val() || {});
+  const qs = form.questions || [];
+  if (!responses.length) {
+    box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0;">아직 응답이 없어요.</div>';
+    return;
+  }
+  let html = `<div style="font-size:11px;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:10px;margin-top:4px;">📊 총 ${responses.length}개 응답</div>`;
+  qs.forEach((q, qi) => {
+    const answers = responses.map(r => (r.answers||[])[qi]).filter(Boolean);
+    html += `<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--off);">
+      <div style="font-size:12px;font-weight:900;margin-bottom:8px;color:var(--text);">Q${qi+1}. ${escapeHtml(q.q)}</div>`;
+    if (q.type === 'multiple') {
+      const counts = {};
+      (q.opts||[]).forEach((o,i) => counts[i] = 0);
+      answers.forEach(a => { if (a.value !== undefined) counts[a.value] = (counts[a.value]||0)+1; });
+      const total = answers.length || 1;
+      html += (q.opts||[]).map((o,i) => {
+        const pct = Math.round((counts[i]||0)/total*100);
+        return `<div style="margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>${escapeHtml(o)}</span><span style="font-weight:800;color:var(--theme-a);">${counts[i]}명 (${pct}%)</span></div>
+          <div style="height:6px;background:var(--off2);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:var(--theme-a);border-radius:3px;"></div></div>
+        </div>`;
+      }).join('');
+    } else if (q.type === 'scale') {
+      const vals = answers.map(a=>parseInt(a.value)).filter(v=>!isNaN(v));
+      const avg = vals.length ? (vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(1) : '—';
+      html += `<div style="font-size:20px;font-weight:900;color:var(--theme-a);">${avg}<span style="font-size:12px;color:var(--muted);">/5</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${vals.length}명 응답</div>`;
+    } else if (q.type === 'board') {
+      html += `<div style="display:flex;flex-wrap:wrap;gap:6px;">` +
+        answers.map((a,i) => {
+          const c = postitColors[i % postitColors.length];
+          return `<div style="padding:8px 10px;border-radius:10px;background:${c.bg};color:${c.txt};font-size:12px;font-weight:700;max-width:160px;word-break:break-word;">${escapeHtml(a.value||'')}${a.name?`<div style="font-size:10px;opacity:0.6;margin-top:4px;">— ${escapeHtml(a.name)}</div>`:''}</div>`;
+        }).join('') + `</div>`;
+    } else {
+      html += `<div style="display:flex;flex-direction:column;gap:4px;">` +
+        answers.map(a => `<div style="padding:7px 10px;border-radius:8px;background:var(--white);border:1px solid var(--border);font-size:12px;font-weight:700;">${escapeHtml(a.value||'')}${a.name?`<span style="font-size:10px;color:var(--muted);margin-left:6px;">— ${escapeHtml(a.name)}</span>`:''}</div>`).join('') +
+        `</div>`;
+    }
+    // 제출자 이름 목록 (익명이 아닐 때)
+    html += `</div>`;
+  });
+  html += `<div style="font-size:11px;color:var(--muted);margin-top:4px;padding:8px 10px;background:var(--off);border-radius:10px;">제출자: ${responses.map(r=>r.submitter||'익명').join(', ')}</div>`;
+  box.innerHTML = html;
+}
+
+async function clearStandbyResponses() {
+  if (!confirm('모든 상시 폼 응답을 삭제할까요?')) return;
+  if (db && roomCode) await db.ref(fbPath('standbyFormResponses')).remove();
+  document.getElementById('standbyResponseView').innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">응답이 초기화됐어요.</div>';
+}
+
+// ── Standby 리스너 (호스트) ──
+function attachStandbyListeners() {
+  if (!db || !roomCode) return;
+  fbOn('standbyForm', 'value', s => {
+    const d = s.val() || {};
+    standbySurveyActive = !!d.published;
+    updateStandbyBadge(standbySurveyActive);
+    if (d.title) { const el = document.getElementById('standbyFormTitle'); if(el) el.value = d.title; }
+    if (d.nameMode) setStandbyNameMode(d.nameMode);
+    if (d.questions) { standbySurveyQuestions = d.questions; renderStandbyEditor(); }
+    const pb = document.getElementById('standbyPublishBtn');
+    const ub = document.getElementById('standbyUnpublishBtn');
+    if(pb) pb.style.display = d.published ? 'none' : '';
+    if(ub) ub.style.display = d.published ? '' : 'none';
+  });
+}
+
+// ── 참여자: 상시 폼 리스너 ──
+function attachParticipantStandbyListeners(code) {
+  if (!db) return;
+  db.ref(`sessions/${code}/standbyForm`).on('value', s => {
+    const d = s.val();
+    const tab = document.getElementById('pTab-survey');
+    if (!d || !d.published) {
+      if (tab) tab.style.display = 'none';
+      return;
+    }
+    if (tab) tab.style.display = '';
+    // 폼 내용 렌더
+    renderParticipantStandbyForm(d);
+  });
+}
+
+function renderParticipantStandbyForm(form) {
+  const titleEl = document.getElementById('pFormTitle');
+  const descEl = document.getElementById('pFormDesc');
+  const nameArea = document.getElementById('pFormNameArea');
+  const nameInput = document.getElementById('pFormNameInput');
+  const nameHint = document.getElementById('pFormNameHint');
+  const qBox = document.getElementById('pFormQuestions');
+  if (titleEl) titleEl.textContent = form.title || '📋 상시 폼';
+  if (descEl) descEl.textContent = '';
+
+  // 이름 입력 표시
+  const nm = form.nameMode || 'anon';
+  if (nameArea) {
+    nameArea.style.display = nm === 'anon' ? 'none' : '';
+    if (nameHint) nameHint.textContent = nm === 'required' ? '* 이름은 필수 입력이에요.' : '이름을 입력하지 않으면 익명으로 제출돼요.';
+  }
+
+  if (!qBox) return;
+  const qs = form.questions || [];
+  window._standbyFormData = form; // 제출 시 참조
+  window._standbyFormAnswers = qs.map(() => null);
+
+  qBox.innerHTML = qs.map((q, qi) => {
+    const required = `<span style="color:#e05050;font-size:11px;margin-left:4px;">*</span>`;
+    const qHeader = `<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;line-height:1.5;">Q${qi+1}. ${escapeHtml(q.q)} ${q.type!=='board'?required:''}</div>`;
+    if (q.type === 'multiple') {
+      return `<div style="margin-bottom:18px;">${qHeader}
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          ${(q.opts||[]).map((o,oi)=>`
+            <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);cursor:pointer;font-size:13px;font-weight:600;">
+              <input type="radio" name="sform_q${qi}" value="${oi}" onchange="window._standbyFormAnswers[${qi}]=${oi}" style="accent-color:var(--theme-a);">
+              <span style="width:22px;height:22px;border-radius:6px;background:var(--off2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">${'ABCD'[oi]||oi+1}</span>
+              ${escapeHtml(o)}
+            </label>`).join('')}
+        </div></div>`;
+    } else if (q.type === 'scale') {
+      return `<div style="margin-bottom:18px;">${qHeader}
+        <div style="display:flex;gap:8px;justify-content:center;">
+          ${[1,2,3,4,5].map(v=>`
+            <button type="button" id="sform_scale_${qi}_${v}" onclick="selectScaleBtn(${qi},${v})"
+              style="width:48px;height:48px;border-radius:12px;border:1.5px solid var(--border);background:var(--off);font-size:18px;font-weight:900;cursor:pointer;transition:all 0.15s;">${v}</button>`).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;padding:0 4px;"><span>매우 낮음</span><span>매우 높음</span></div>
+      </div>`;
+    } else if (q.type === 'board') {
+      return `<div style="margin-bottom:18px;">${qHeader}
+        <textarea id="sform_board_${qi}" style="width:100%;min-height:80px;padding:11px;border-radius:12px;border:1.5px solid var(--border);font-family:inherit;font-size:13px;resize:vertical;" placeholder="자유롭게 입력하세요..."></textarea>
+        <button type="button" onclick="submitBoardEntry(${qi})" style="margin-top:8px;padding:9px 18px;border-radius:10px;border:none;background:var(--theme-a);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📌 추가</button>
+        <div id="sform_boardwall_${qi}" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+      </div>`;
+    } else {
+      return `<div style="margin-bottom:18px;">${qHeader}
+        <textarea id="sform_text_${qi}" style="width:100%;min-height:70px;padding:11px;border-radius:12px;border:1.5px solid var(--border);font-family:inherit;font-size:13px;resize:vertical;" placeholder="답변을 입력하세요..."
+          oninput="window._standbyFormAnswers[${qi}]=this.value"></textarea>
+      </div>`;
+    }
+  }).join('');
+}
+
+function selectScaleBtn(qi, v) {
+  window._standbyFormAnswers = window._standbyFormAnswers || [];
+  window._standbyFormAnswers[qi] = v;
+  [1,2,3,4,5].forEach(n => {
+    const btn = document.getElementById(`sform_scale_${qi}_${n}`);
+    if (!btn) return;
+    const active = n <= v;
+    btn.style.background = active ? 'var(--theme-a)' : 'var(--off)';
+    btn.style.color = active ? '#fff' : 'var(--text)';
+    btn.style.borderColor = active ? 'var(--theme-a)' : 'var(--border)';
+  });
+}
+
+async function submitBoardEntry(qi) {
+  const input = document.getElementById(`sform_board_${qi}`);
+  const text = (input?.value||'').trim();
+  if (!text) return;
+  const form = window._standbyFormData;
+  const code = roomCode;
+  if (!form || !code || !db) { alert('연결이 필요해요.'); return; }
+  const nm = form.nameMode || 'anon';
+  const nameInput = document.getElementById('pFormNameInput');
+  const name = nm === 'anon' ? '' : (nameInput?.value.trim() || '');
+  await db.ref(`sessions/${code}/standbyFormResponses`).push({
+    type: 'board_entry', qIdx: qi, submitter: name||'익명',
+    answers: [{ id:(form.questions[qi]||{}).id, q:(form.questions[qi]||{}).q, type:'board', value:text, name }],
+    ts: Date.now()
+  });
+  if (input) input.value = '';
+  const wall = document.getElementById(`sform_boardwall_${qi}`);
+  if (wall) {
+    const c = postitColors[wall.children.length % postitColors.length];
+    const div = document.createElement('div');
+    div.style.cssText = `padding:7px 10px;border-radius:10px;background:${c.bg};color:${c.txt};font-size:12px;font-weight:700;max-width:150px;word-break:break-word;`;
+    div.innerHTML = escapeHtml(text) + (name?`<div style="font-size:10px;opacity:0.6;margin-top:3px;">— ${escapeHtml(name)}</div>`:'');
+    wall.appendChild(div);
+  }
+  showSubmitSuccess('📌 추가됐어요!');
+}
+
+async function submitStandbyForm() {
+  const form = window._standbyFormData;
+  const code = roomCode;
+  if (!form || !code || !db) { alert('연결이 필요해요. 세션에 먼저 참여해 주세요.'); return; }
+
+  const nm = form.nameMode || 'anon';
+  const nameInput = document.getElementById('pFormNameInput');
+  const name = nm === 'anon' ? '' : (nameInput?.value.trim() || '');
+  if (nm === 'required' && !name) { nameInput?.focus(); alert('이름을 입력해 주세요.'); return; }
+
+  const qs = form.questions || [];
+  const answers = [];
+  let hasEmpty = false;
+  qs.forEach((q, qi) => {
+    if (q.type === 'board') return; // 자유기록판은 개별 제출
+    const val = window._standbyFormAnswers?.[qi];
+    if (val === null || val === undefined || val === '') { hasEmpty = true; return; }
+    answers.push({ id: q.id, q: q.q, type: q.type, value: val, name });
+  });
+  if (hasEmpty) { alert('모든 문항에 답변해 주세요.'); return; }
+
+  const btn = document.getElementById('pFormSubmitBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '제출 중...'; }
+  try {
+    await db.ref(`sessions/${code}/standbyFormResponses`).push({
+      type: 'full', submitter: name||'익명', answers, ts: Date.now()
+    });
+    // 제출 완료 화면
+    const qBox = document.getElementById('pFormQuestions');
+    const nameArea = document.getElementById('pFormNameArea');
+    if (qBox) qBox.innerHTML = '';
+    if (nameArea) nameArea.style.display = 'none';
+    if (btn) { btn.style.display = 'none'; }
+    const titleEl = document.getElementById('pFormTitle');
+    if (titleEl) titleEl.textContent = '✅ 제출 완료!';
+    const descEl = document.getElementById('pFormDesc');
+    if (descEl) descEl.innerHTML = '<div style="text-align:center;padding:28px 0;"><div style="font-size:48px;margin-bottom:10px;">🎉</div><div style="font-size:15px;font-weight:800;color:var(--theme-a);">응답이 전달됐어요!</div><div style="font-size:13px;color:var(--muted);margin-top:6px;">소중한 의견을 남겨주셔서 감사합니다.</div></div>';
+  } catch(e) {
+    alert('제출 중 오류가 발생했어요. 다시 시도해 주세요.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✅ 제출하기'; }
+  }
+}
+
+// 기존 호환 함수 (다른 코드에서 참조할 수 있음)
+async function saveFreeBoard() { addFeed('자유 기록판은 상시 폼 탭에서 관리해 주세요.', 'var(--muted)'); }
+async function clearFreeBoard() {}
+async function saveStandbySurvey() { await publishStandbyForm(); }
+async function toggleStandbySurvey(v) { v ? publishStandbyForm() : unpublishStandbyForm(); }
+function renderFreeBoardHost() {}
+function renderStandbyResponseView() { loadStandbyResponses(); }
+
+// ── 참여자: 탭 전환 ──
+function switchPTab(tab) {
+  ['live','board','survey'].forEach(t => {
+    const btn = document.getElementById(`pTab-${t}`);
+    const panel = document.getElementById(`pPanel-${t}`);
+    if (!btn || !panel) return;
+    const isActive = t === tab;
+    panel.style.display = isActive ? '' : 'none';
+    btn.style.background = isActive ? 'var(--theme-a)' : 'var(--off)';
+    btn.style.color = isActive ? '#fff' : 'var(--muted)';
+  });
+  if (tab === 'board') loadPBoardPosts();
+  // survey 탭은 Firebase 리스너가 자동으로 폼을 렌더링하므로 별도 호출 불필요
+}
+
+// ── 참여자: 자유 기록판 ──
+function setPBoardMode(mode) {
+  document.getElementById('pBoardAnonMode').value = mode;
+  const nick = document.getElementById('pBoardToggleNick');
+  const anon = document.getElementById('pBoardToggleAnon');
+  if (mode === 'nick') {
+    nick.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    anon.style.cssText += ';border-color:var(--border2);background:var(--off);color:var(--muted);';
+  } else {
+    anon.style.cssText += ';border-color:var(--theme-a);background:var(--theme-a);color:#fff;';
+    nick.style.cssText += ';border-color:var(--border2);background:var(--off);color:var(--muted);';
+  }
+}
+
+async function submitPBoard() {
+  const input = document.getElementById('pBoardInput');
+  const txt = (input?.value||'').trim();
+  if (!txt) { alert('내용을 입력해 주세요.'); return; }
+  const isAnon = document.getElementById('pBoardAnonMode')?.value === 'anon';
+  const nick = isAnon ? '익명' : (participantNickname || '익명');
+  if (db && roomCode) {
+    await db.ref(`sessions/${roomCode}/freeBoard/posts`).push({ text: txt, nickname: nick, ts: Date.now() });
+  }
+  if (input) input.value = '';
+  showSubmitSuccess('기록이 붙었어요! 📌');
+  loadPBoardPosts();
+}
+
+function loadPBoardPosts() {
+  if (!db || !roomCode) return;
+  // 안내 문구
+  db.ref(`sessions/${roomCode}/freeBoard/prompt`).once('value').then(s => {
+    const el = document.getElementById('pBoardPrompt');
+    if (el && s.val()) el.textContent = s.val();
+  });
+  // 포스트 목록
+  db.ref(`sessions/${roomCode}/freeBoard/posts`).on('value', s => {
+    const posts = s.val() || {};
+    const wall = document.getElementById('pBoardWall'); if (!wall) return;
+    const items = Object.values(posts);
+    if (!items.length) { wall.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;width:100%;">아직 기록이 없어요. 첫 번째로 남겨보세요!</div>'; return; }
+    wall.innerHTML = items.map((p, i) => {
+      const c = [{bg:'#fff9c4',txt:'#7a6000'},{bg:'#c8f7c5',txt:'#1a5c2a'},{bg:'#d6eaff',txt:'#0a3d8c'},{bg:'#ffd6e0',txt:'#8c1a3a'},{bg:'#e8d5ff',txt:'#4a1a8c'},{bg:'#ffe0cc',txt:'#8c3a00'}][i%6];
+      const rot = ((i*7+3)%7-3);
+      return `<div style="width:130px;min-height:100px;border-radius:4px 12px 12px 12px;padding:10px;font-size:12px;font-weight:600;line-height:1.5;box-shadow:2px 3px 8px rgba(0,0,0,0.1);background:${c.bg};color:${c.txt};transform:rotate(${rot}deg);word-break:break-word;flex-shrink:0;">
+        <div>${escapeHtml(p.text||'')}</div>
+        <div style="font-size:10px;opacity:0.6;margin-top:6px;">— ${escapeHtml(p.nickname||'익명')}</div>
+      </div>`;
+    }).join('');
+  });
+}
+
+// ── 참여자: 상시 설문 ──
+let pSurveyAnswers = {};  // {questionId: value}
+let pSurveySubmitted = false;
+
+// (구 loadPSurvey / renderPSurvey / attachStandbyListeners 제거 — 새 standby 시스템으로 대체)
 
 // ============================================================
 //   BGM — YouTube IFrame API
