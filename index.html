@@ -1626,6 +1626,7 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="action-row">
               <button class="btn-launch" onclick="broadcastPostitQ()">📢 질문 전송</button>
               <button class="btn-outline" onclick="clearPostits()">🗑 전체 삭제</button>
+              <button class="btn-launch" onclick="shareActivityResult('postit')" style="background:linear-gradient(135deg,#6d28d9,#4f46e5);">📺 결과 공유</button>
             </div>
             <div id="postitBoard" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;min-height:80px;"></div>
           </div>
@@ -1747,36 +1748,26 @@ body.ui-dark #screen-participant { background: var(--off); }
             <div class="card-title">슬라이더 투표</div>
           </div>
           <div class="card-body">
-            <div class="form-group">
-              <label class="form-label">슬라이더 질문</label>
-              <input type="text" class="form-input" id="sliderQ" value="이 주제를 얼마나 잘 이해했나요?">
-            </div>
-            <div style="display:flex;gap:16px;margin-bottom:16px">
-              <div style="flex:1">
-                <label class="form-label">최소 레이블</label>
-                <input type="text" class="form-input" id="sliderMin" value="전혀 모르겠어요">
-              </div>
-              <div style="flex:1">
-                <label class="form-label">최대 레이블</label>
-                <input type="text" class="form-input" id="sliderMax" value="완벽하게 이해했어요">
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">문항 목록 (여러 개 추가 가능)</label>
+              <div id="sliderEditList"></div>
+              <button class="btn-add-opt" onclick="addSliderItem()" style="margin-top:8px;">+ 문항 추가</button>
+              <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">
+                💡 문항을 "전송"하면 참여자 화면에 바로 떠요. 각 문항마다 독립적으로 응답받을 수 있어요.
               </div>
             </div>
-            <div class="slider-container">
-              <div id="sliderQDisplay" style="font-family:var(--font);font-weight:700;font-size:20px;margin-bottom:20px">이 주제를 얼마나 잘 이해했나요?</div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px">
-                <span id="sliderMinLbl">전혀 모르겠어요</span>
-                <span id="sliderMaxLbl">완벽하게 이해했어요</span>
+            <div class="card" style="border-radius:16px;border:1px dashed var(--border2);background:var(--off);">
+              <div class="card-body" style="padding:18px;">
+                <div style="font-size:11px;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">현재 활성 문항 결과</div>
+                <div id="sliderActivePreview" style="color:var(--muted);font-size:13px;padding:8px 0;">문항을 전송하면 결과가 여기에 표시됩니다.</div>
+                <div class="action-row" style="margin-top:10px;">
+                  <button class="btn-outline" onclick="resetActiveSlider()">🔄 현재 초기화</button>
+                  <button class="btn-outline" onclick="resetAllSliders()">🧹 전체 초기화</button>
+                  <button class="btn-launch" onclick="addRandomSliders()">🎲 테스트 데이터</button>
+                  <button class="btn-launch" onclick="showSliderSummary()" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">📊 종합 브리프</button>
+                  <button class="btn-launch" onclick="shareActivityResult('slider')" style="background:linear-gradient(135deg,#6d28d9,#4f46e5);">📺 결과 공유</button>
+                </div>
               </div>
-              <div class="slider-row">
-                <input type="range" class="range-slider" id="mySlider" min="0" max="100" value="50" oninput="updateSlider()">
-                <div class="slider-val" id="sliderVal">50</div>
-              </div>
-              <div id="sliderResultBars" style="margin-top:20px"></div>
-            </div>
-            <div class="action-row">
-              <button class="btn-launch" onclick="submitSlider()">응답 제출</button>
-              <button class="btn-outline" onclick="addRandomSliders()">🎲 테스트 데이터</button>
-              <button class="btn-outline" onclick="resetSlider()">🔄 초기화</button>
             </div>
           </div>
         </div>
@@ -2145,8 +2136,27 @@ async function initHostSession(c, initialAct) {
 
     attachRatingListeners();
 
-    fbOn('slider','value', s=>{
-      sliderResponses=s.val()||[]; if(document.getElementById('ap-slider')?.classList.contains('active')){ renderSliderResults(); updateCount('cnt-slider',sliderResponses.length); }
+    // 슬라이더 다중 문항 리스너
+    fbOn('sliderItems','value', s=>{
+      sliderItemsById = s.val() || {};
+      renderSliderEditList();
+    });
+    fbOn('sliderVotes','value', s=>{
+      sliderVotesById = s.val() || {};
+      renderSliderActivePreview();
+      updateCount('cnt-slider', Object.values(sliderVotesById).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0));
+    });
+    fbOn('sliderActiveId','value', s=>{
+      activeSliderVotesId = s.val() || null;
+      renderSliderEditList();
+      renderSliderActivePreview();
+    });
+
+    // 포스트잇 실시간 리스너 (호스트)
+    fbOn('postits','value', s=>{
+      postitData = s.val() || {};
+      renderPostitBoard();
+      updateCount('cnt-postit', Object.keys(postitData).length);
     });
 
     db.ref('.info/connected').on('value', s=>setFbStatus(s.val()?'connected':'offline'));
@@ -2230,6 +2240,13 @@ async function joinSessionFirebase(code) {
       } else {
         document.getElementById('activityShareOverlay').style.display = 'none';
       }
+    });
+
+    // 슬라이더 활성 문항 변경 → 참여자 화면 갱신
+    db.ref(`sessions/${code}/sliderActiveId`).on('value', s=>{
+      activeSliderVotesId = s.val() || null;
+      const pTitle=document.getElementById('pTitle');
+      if(pTitle && pTitle.textContent==='슬라이더 응답') updateParticipantView('slider');
     });
 
     // 투표 실시간 리스너
@@ -2552,7 +2569,9 @@ async function startAsHost(c, initialAct, title) {
   loadTemplates(); loadContextDefaults(); showScreen('host');
   totalParticipants=0; totalResponses=0; totalQuestions=0;
   qaItems=[]; wcData={}; ratings=[]; sliderResponses=[];
-  updateStats(); renderQuiz(); renderQA(); renderSliderResults();
+  sliderItemsById={}; sliderVotesById={}; activeSliderVotesId=null;
+  postitData={};
+  updateStats(); renderQuiz(); renderQA();
   // open requested activity panel
   switchActivity(initAct, null);
   await initHostSession(c, initAct);
@@ -2628,6 +2647,10 @@ function switchActivity(act,btn){
   if(navTabs[idx]) navTabs[idx].classList.add('active');
   if(act==='quiz'){
     if(!hostQuizQuestions.length) loadDefaultQuiz();
+  }
+  if(act==='slider'){
+    if(db && roomCode) ensureSliderSeedFirebase().then(()=>renderSliderEditList());
+    else { ensureSliderSeedLocal(); renderSliderEditList(); renderSliderActivePreview(); }
   }
   if(act==='bgm'){
     initBGMPresets();
@@ -2832,6 +2855,16 @@ async function shareActivityResult(type) {
       icon: ratingItemsById[id]?.icon || 'star',
       votes: ratingVotesById[id] || []
     }));
+  } else if (type === 'postit') {
+    payload.postits = Object.values(postitData || {});
+    payload.q = document.getElementById('postitQ')?.value || '';
+  } else if (type === 'slider') {
+    const ids = Object.keys(sliderItemsById || {}).sort((a,b)=>((sliderItemsById[a]?.order??0)-(sliderItemsById[b]?.order??0)));
+    payload.items = ids.map(id => ({
+      id, title: sliderItemsById[id]?.title||'슬라이더',
+      min: sliderItemsById[id]?.min||'낮음', max: sliderItemsById[id]?.max||'높음',
+      votes: sliderVotesById[id]||[]
+    }));
   } else if (type === 'quiz') {
     payload.quizAnswerCounts = quizAnswerCounts || {};
     payload.questions = hostQuizQuestions || [];
@@ -2937,6 +2970,59 @@ function renderActivityShareOverlay(payload, isHostView) {
             <span style="font-size:10px;color:var(--muted);width:38px;">${pct}% (${cnt})</span>
           </div>`;}).join('')}
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">${votes.length}명 응답</div>
+      </div>`;
+    });
+  } else if (payload.type === 'postit') {
+    titleEl.textContent = '📝 포스트잇 결과';
+    const items = payload.postits || [];
+    if (!items.length) { html = '<div style="text-align:center;color:var(--muted);padding:24px;">아직 포스트잇이 없어요.</div>'; }
+    else {
+      if (payload.q) html = `<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:16px;padding:10px 14px;background:var(--theme-l);border-radius:10px;">💬 ${escapeHtml(payload.q)}</div>`;
+      html += `<div style="display:flex;flex-wrap:wrap;gap:12px;">`;
+      items.forEach((p, i) => {
+        const colors = [
+          {bg:'#fff9c4',txt:'#7a6000'},{bg:'#c8f7c5',txt:'#1a5c2a'},
+          {bg:'#d6eaff',txt:'#0a3d8c'},{bg:'#ffd6e0',txt:'#8c1a3a'},
+          {bg:'#e8d5ff',txt:'#4a1a8c'},{bg:'#ffe0cc',txt:'#8c3a00'},
+        ];
+        const c = colors[i % colors.length];
+        const rot = ((i*7+3)%7-3);
+        html += `<div style="width:148px;min-height:120px;border-radius:4px 14px 14px 14px;padding:14px 12px 10px;font-size:13px;font-weight:600;line-height:1.5;box-shadow:3px 4px 12px rgba(0,0,0,0.13);background:${c.bg};color:${c.txt};transform:rotate(${rot}deg);display:flex;flex-direction:column;justify-content:space-between;word-break:break-word;">
+          <div>${escapeHtml(p.text||'')}</div>
+          <div style="font-size:11px;font-weight:800;opacity:0.6;margin-top:8px;">— ${escapeHtml(p.nickname||'익명')}</div>
+        </div>`;
+      });
+      html += `</div><div style="margin-top:14px;padding:10px 14px;background:var(--off);border-radius:10px;font-size:12px;color:var(--muted);font-weight:800;">총 ${items.length}개 포스트잇</div>`;
+    }
+  } else if (payload.type === 'slider' && payload.items) {
+    titleEl.textContent = '🎚️ 슬라이더 결과';
+    const items = payload.items;
+    const allVotes = items.flatMap(it=>it.votes||[]);
+    const overallAvg = allVotes.length ? Math.round(allVotes.reduce((a,b)=>a+b,0)/allVotes.length) : null;
+    html = `<div style="background:var(--theme-l);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:18px;">
+      <div style="text-align:center;">
+        <div style="font-size:40px;font-weight:900;color:var(--theme-a);">${overallAvg??'—'}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:800;">전체 평균/100</div>
+      </div>
+      <div><div style="font-size:13px;font-weight:900;color:var(--text);">총 ${allVotes.length}명 응답 · ${items.length}개 문항</div>
+        <div style="height:8px;background:var(--off2);border-radius:4px;overflow:hidden;margin-top:8px;max-width:200px;">${overallAvg!==null?`<div style="width:${overallAvg}%;height:100%;background:var(--theme-g);border-radius:4px;"></div>`:''}</div>
+      </div>
+    </div>`;
+    items.forEach((it, idx) => {
+      const votes = it.votes||[];
+      const avg = votes.length ? Math.round(votes.reduce((a,b)=>a+b,0)/votes.length) : null;
+      const buckets=[[0,25],[26,50],[51,75],[76,100]], labels=['0–25','26–50','51–75','76–100'];
+      const counts=buckets.map(([lo,hi])=>votes.filter(v=>v>=lo&&v<=hi).length);
+      const max=Math.max(...counts)||1;
+      html += `<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--surface-card);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-weight:900;font-size:14px;">Q${idx+1}. ${escapeHtml(it.title)}</span>
+          <span style="font-size:22px;font-weight:900;color:var(--theme-a);">${avg??'—'}<span style="font-size:11px;color:var(--muted);">/100</span></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;"><span>${escapeHtml(it.min)}</span><span>${escapeHtml(it.max)}</span></div>
+        <div style="height:8px;background:var(--off2);border-radius:4px;overflow:hidden;margin-bottom:12px;">${avg!==null?`<div style="width:${avg}%;height:100%;background:var(--theme-g);border-radius:4px;"></div>`:''}</div>
+        ${labels.map((l,i)=>`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:2px;"><span>${l}</span><span>${counts[i]}명</span></div><div style="height:6px;background:var(--off2);border-radius:3px;overflow:hidden;"><div style="width:${Math.round(counts[i]/max*100)}%;height:100%;background:var(--theme-g);border-radius:3px;"></div></div></div>`).join('')}
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">${votes.length}명 응답</div>
       </div>`;
     });
   } else if (payload.type === 'quiz') {
@@ -3721,14 +3807,278 @@ function attachRatingListeners() {
 // ============================================================
 //   SLIDER
 // ============================================================
-function updateSlider(){document.getElementById('sliderVal').textContent=document.getElementById('mySlider').value;}
+// ============================================================
+//   SLIDER — 다중 문항 시스템
+// ============================================================
+let sliderItemsById = {};   // { id: {title, min, max, order} }
+let sliderVotesById = {};   // { id: [v1, v2, ...] }
+let activeSliderVotesId = null;
 
-async function submitSlider(){const v=parseInt(document.getElementById('mySlider').value);const nr=[...sliderResponses,v];const wrote=await fbSet('slider',nr);if(!wrote){sliderResponses.push(v);totalResponses++;updateStats();renderSliderResults();updateCount('cnt-slider',sliderResponses.length);}addFeed(`슬라이더 응답: ${v}점`,'var(--theme-a)');}
+function newSliderId() { return 'sl' + Math.random().toString(36).slice(2,9); }
 
-function renderSliderResults(){const c=document.getElementById('sliderResultBars');if(!c||!sliderResponses.length){if(c)c.innerHTML='';return;}const avg=Math.round(sliderResponses.reduce((a,b)=>a+b,0)/sliderResponses.length);const buckets=[0,25,50,75,100];const labels=['0-25','26-50','51-75','76-100'];const counts=labels.map((_,i)=>sliderResponses.filter(v=>v>=buckets[i]&&v<=buckets[i+1]).length);const max=Math.max(...counts)||1;c.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">평균: <strong style="color:var(--theme-a);font-size:18px">${avg}</strong> / 100 · ${sliderResponses.length}명 응답</div>${labels.map((l,i)=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px"><span>${l}</span><span>${counts[i]}명</span></div><div class="slider-result-bar"><div class="slider-result-fill" style="width:${Math.round(counts[i]/max*100)}%"></div></div></div>`).join('')}`;}
+function ensureSliderSeedLocal() {
+  if (Object.keys(sliderItemsById).length) return;
+  const id = 'sl1';
+  sliderItemsById[id] = { title:'이 주제를 얼마나 잘 이해했나요?', min:'전혀 모르겠어요', max:'완벽하게 이해했어요', order:0 };
+  sliderVotesById[id] = [];
+  activeSliderVotesId = id;
+}
 
-async function addRandomSliders(){const n=Math.floor(Math.random()*12)+5;const nr=[...sliderResponses,...Array.from({length:n},()=>Math.floor(Math.random()*101))];await fbSet('slider',nr);if(!FIREBASE_READY){sliderResponses=nr;totalResponses+=n;updateStats();renderSliderResults();updateCount('cnt-slider',sliderResponses.length);}addFeed(`${n}개 테스트 슬라이더 응답 추가됨`,'var(--muted)');}
-async function resetSlider(){await fbSet('slider',[]);sliderResponses=[];renderSliderResults();updateCount('cnt-slider',0);}
+async function ensureSliderSeedFirebase() {
+  if (!db || !roomCode) { ensureSliderSeedLocal(); return; }
+  const snap = await db.ref(fbPath('sliderItems')).once('value');
+  if (snap.val() && Object.keys(snap.val()).length) return;
+  const id = 'sl1';
+  await db.ref(fbPath('sliderItems')).set({ [id]:{ title:'이 주제를 얼마나 잘 이해했나요?', min:'전혀 모르겠어요', max:'완벽하게 이해했어요', order:0 } });
+  await db.ref(fbPath('sliderVotes')).set({ [id]:[] });
+  await db.ref(fbPath('sliderActiveId')).set(id);
+}
+
+function renderSliderEditList() {
+  const box = document.getElementById('sliderEditList'); if (!box) return;
+
+  // 현재 DOM 입력값 보존
+  const saved = {};
+  Object.keys(sliderItemsById).forEach(id => {
+    const t = document.getElementById(`slider-title-${id}`);
+    const mn = document.getElementById(`slider-min-${id}`);
+    const mx = document.getElementById(`slider-max-${id}`);
+    if (t) saved[id] = { title: t.value, min: mn?.value||'', max: mx?.value||'' };
+  });
+
+  const ids = Object.keys(sliderItemsById).sort((a,b)=>((sliderItemsById[a]?.order??0)-(sliderItemsById[b]?.order??0)));
+  if (!ids.length) { box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0;">문항이 없어요. 아래에서 추가해 주세요.</div>'; return; }
+
+  box.innerHTML = ids.map((id, idx) => {
+    const it = sliderItemsById[id] || {};
+    const sv = saved[id];
+    const title = escapeHtml(sv ? sv.title : (it.title || `슬라이더 ${idx+1}`));
+    const minL = sv ? sv.min : (it.min || '낮음');
+    const maxL = sv ? sv.max : (it.max || '높음');
+    const isActive = id === activeSliderVotesId;
+    const votes = sliderVotesById[id] || [];
+    const avg = votes.length ? Math.round(votes.reduce((a,b)=>a+b,0)/votes.length) : null;
+    return `
+      <div class="card" style="border-radius:14px;border:${isActive?'2px solid var(--theme-a)':'1px solid var(--border)'};background:var(--white);margin-bottom:10px;">
+        <div class="card-body" style="padding:14px;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+            <input class="form-input" id="slider-title-${id}" value="${title}" placeholder="슬라이더 질문을 입력하세요" style="flex:1;min-width:200px;">
+            <button class="btn-sm ${isActive?'btn-primary-theme':'btn-ghost'}" onclick="launchSlider('${id}')">
+              ${isActive ? '✅ 전송됨' : '📢 전송'}
+            </button>
+            <button class="btn-sm btn-ghost" onclick="saveSliderItem('${id}')">💾 저장</button>
+            <button class="btn-sm btn-ghost" onclick="removeSliderItem('${id}')" style="border-color:#ffb3b3;color:#b10000;">삭제</button>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:120px;">
+              <div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:4px;">최소 레이블</div>
+              <input class="form-input" id="slider-min-${id}" value="${minL}" placeholder="낮음" style="font-size:12px;padding:6px 10px;">
+            </div>
+            <div style="flex:1;min-width:120px;">
+              <div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:4px;">최대 레이블</div>
+              <input class="form-input" id="slider-max-${id}" value="${maxL}" placeholder="높음" style="font-size:12px;padding:6px 10px;">
+            </div>
+          </div>
+          <div style="margin-top:6px;font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;">
+            <span class="badge">${votes.length}명 응답</span>
+            ${avg !== null ? `<span class="badge" style="color:var(--theme-a);">평균 ${avg}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderSliderActivePreview() {
+  const box = document.getElementById('sliderActivePreview'); if (!box) return;
+  if (!activeSliderVotesId) { box.innerHTML = '<div style="color:var(--muted);font-size:13px;">문항을 전송하면 결과가 여기에 표시됩니다.</div>'; return; }
+  const it = sliderItemsById[activeSliderVotesId] || {};
+  const votes = sliderVotesById[activeSliderVotesId] || [];
+  if (!votes.length) { box.innerHTML = `<div style="font-size:13px;font-weight:700;color:var(--text);">"${escapeHtml(it.title||'')}"</div><div style="color:var(--muted);font-size:12px;margin-top:6px;">아직 응답이 없어요</div>`; return; }
+  const avg = Math.round(votes.reduce((a,b)=>a+b,0)/votes.length);
+  const buckets = [[0,25],[26,50],[51,75],[76,100]];
+  const labels = ['0-25','26-50','51-75','76-100'];
+  const counts = buckets.map(([lo,hi])=>votes.filter(v=>v>=lo&&v<=hi).length);
+  const max = Math.max(...counts)||1;
+  box.innerHTML = `
+    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;">"${escapeHtml(it.title||'')}"</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">평균 <strong style="color:var(--theme-a);font-size:20px;">${avg}</strong> / 100 · ${votes.length}명 응답</div>
+    ${labels.map((l,i)=>`<div style="margin-bottom:7px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px;"><span>${l}</span><span>${counts[i]}명</span></div>
+      <div class="slider-result-bar"><div class="slider-result-fill" style="width:${Math.round(counts[i]/max*100)}%"></div></div>
+    </div>`).join('')}`;
+}
+
+async function addSliderItem() {
+  if (!Object.keys(sliderItemsById).length && db && roomCode) await ensureSliderSeedFirebase();
+  else if (!Object.keys(sliderItemsById).length) ensureSliderSeedLocal();
+  const id = newSliderId();
+  const maxOrder = Object.values(sliderItemsById).reduce((m,it)=>Math.max(m,it.order??0),-1);
+  const item = { title:`새 슬라이더 ${Object.keys(sliderItemsById).length+1}`, min:'낮음', max:'높음', order: maxOrder+1 };
+  if (db && roomCode) {
+    await db.ref(fbPath(`sliderItems/${id}`)).set(item);
+    await db.ref(fbPath(`sliderVotes/${id}`)).set([]);
+  } else {
+    sliderItemsById[id] = item; sliderVotesById[id] = [];
+    if (!activeSliderVotesId) activeSliderVotesId = id;
+    renderSliderEditList();
+  }
+}
+
+async function saveSliderItem(id) {
+  const title = document.getElementById(`slider-title-${id}`)?.value.trim() || '슬라이더';
+  const min = document.getElementById(`slider-min-${id}`)?.value.trim() || '낮음';
+  const max = document.getElementById(`slider-max-${id}`)?.value.trim() || '높음';
+  const patch = { title, min, max };
+  if (db && roomCode) {
+    await db.ref(fbPath(`sliderItems/${id}`)).update(patch);
+  } else {
+    sliderItemsById[id] = { ...(sliderItemsById[id]||{}), ...patch };
+    renderSliderEditList();
+  }
+  addFeed('슬라이더 문항 저장됨', 'var(--muted)');
+}
+
+async function removeSliderItem(id) {
+  if (Object.keys(sliderItemsById).length <= 1) { alert('문항은 최소 1개 필요해요!'); return; }
+  if (db && roomCode) {
+    await db.ref(fbPath(`sliderItems/${id}`)).remove();
+    await db.ref(fbPath(`sliderVotes/${id}`)).remove();
+    if (activeSliderVotesId === id) {
+      const remain = await db.ref(fbPath('sliderItems')).once('value');
+      const next = Object.keys(remain.val()||{})[0] || null;
+      if (next) await db.ref(fbPath('sliderActiveId')).set(next);
+    }
+  } else {
+    delete sliderItemsById[id]; delete sliderVotesById[id];
+    if (activeSliderVotesId === id) activeSliderVotesId = Object.keys(sliderItemsById)[0]||null;
+    renderSliderEditList(); renderSliderActivePreview();
+  }
+}
+
+async function launchSlider(id) {
+  await saveSliderItem(id);
+  activeSliderVotesId = id;
+  if (db && roomCode) {
+    await db.ref(fbPath('sliderActiveId')).set(id);
+    await db.ref(fbPath('activeActivity')).set('slider');
+  }
+  renderSliderEditList();
+  renderSliderActivePreview();
+  addFeed('슬라이더 문항 전송됨', 'var(--theme-a)');
+}
+
+async function resetActiveSlider() {
+  if (!activeSliderVotesId) return;
+  if (db && roomCode) await db.ref(fbPath(`sliderVotes/${activeSliderVotesId}`)).set([]);
+  else { sliderVotesById[activeSliderVotesId]=[]; renderSliderActivePreview(); renderSliderEditList(); }
+  addFeed('슬라이더 현재 문항 초기화', 'var(--muted)');
+}
+
+async function resetAllSliders() {
+  const ids = Object.keys(sliderItemsById);
+  if (db && roomCode) {
+    const fresh = {}; ids.forEach(id=>fresh[id]=[]);
+    await db.ref(fbPath('sliderVotes')).set(fresh);
+  } else {
+    ids.forEach(id=>sliderVotesById[id]=[]);
+    renderSliderActivePreview(); renderSliderEditList();
+  }
+  addFeed('슬라이더 전체 초기화', 'var(--muted)');
+}
+
+async function addRandomSliders() {
+  const id = activeSliderVotesId;
+  if (!id) { alert('먼저 문항을 전송해 주세요.'); return; }
+  const n = Math.floor(Math.random()*12)+5;
+  const add = Array.from({length:n},()=>Math.floor(Math.random()*101));
+  if (db && roomCode) {
+    await db.ref(fbPath(`sliderVotes/${id}`)).transaction(arr=>{ const a=Array.isArray(arr)?arr:[]; return a.concat(add); });
+  } else {
+    sliderVotesById[id] = [...(sliderVotesById[id]||[]),...add];
+    renderSliderActivePreview(); renderSliderEditList();
+  }
+  addFeed(`${n}개 테스트 슬라이더 응답 추가됨`, 'var(--muted)');
+}
+
+function updateSlider(){ document.getElementById('sliderVal') && (document.getElementById('sliderVal').textContent=document.getElementById('mySlider')?.value); }
+async function submitSlider(){ /* 구형 호환 — 실제로는 launchSlider 사용 */ }
+function renderSliderResults(){ /* 구형 호환 */ }
+async function resetSlider(){ await resetAllSliders(); }
+
+// ── 슬라이더 종합 브리프 ──
+function showSliderSummary() {
+  const box = document.getElementById('ratingSummaryContent');
+  const ov = document.getElementById('ratingSummaryOverlay');
+  const titleEl = document.querySelector('#ratingSummaryOverlay .card-title, #ratingSummaryOverlay div[style*="font-weight:950"]');
+  if (!box || !ov) return;
+
+  const ids = Object.keys(sliderItemsById).sort((a,b)=>((sliderItemsById[a]?.order??0)-(sliderItemsById[b]?.order??0)));
+  if (!ids.length) { alert('아직 문항이 없어요.'); return; }
+
+  const allVotes = ids.flatMap(id=>sliderVotesById[id]||[]);
+  const overallAvg = allVotes.length ? Math.round(allVotes.reduce((a,b)=>a+b,0)/allVotes.length) : null;
+
+  const headerEl = document.getElementById('ratingSummaryOverlay').querySelector('div[style*="font-weight:950"]');
+  if (headerEl) headerEl.textContent = '📊 슬라이더 종합 브리프';
+
+  let html = `<div style="background:var(--theme-l);border-radius:18px;padding:18px 22px;margin-bottom:22px;">
+    <div style="font-size:12px;font-weight:900;color:var(--theme-a);letter-spacing:1px;margin-bottom:10px;">📌 전체 요약</div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:48px;font-weight:900;color:var(--theme-a);line-height:1;">${overallAvg??'—'}</div>
+        <div style="font-size:12px;color:var(--muted);font-weight:800;margin-top:4px;">전체 평균 / 100</div>
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <div style="display:flex;gap:16px;margin-bottom:10px;">
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:900;">${ids.length}</div><div style="font-size:11px;color:var(--muted);">문항 수</div></div>
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:900;">${allVotes.length}</div><div style="font-size:11px;color:var(--muted);">총 응답</div></div>
+        </div>
+        ${overallAvg!==null?`<div style="height:10px;background:var(--off2);border-radius:5px;overflow:hidden;margin-top:6px;"><div style="width:${overallAvg}%;height:100%;background:var(--theme-g);border-radius:5px;"></div></div><div style="font-size:11px;color:var(--muted);margin-top:4px;">전체 평균 위치</div>`:''}
+      </div>
+    </div>
+  </div>`;
+
+  html += `<div style="font-size:12px;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:12px;">📋 문항별 결과</div>`;
+  ids.forEach((id, idx) => {
+    const it = sliderItemsById[id]||{};
+    const votes = sliderVotesById[id]||[];
+    const avg = votes.length ? Math.round(votes.reduce((a,b)=>a+b,0)/votes.length) : null;
+    const isActive = id === activeSliderVotesId;
+    const buckets = [[0,25],[26,50],[51,75],[76,100]];
+    const labels = ['0–25','26–50','51–75','76–100'];
+    const counts = buckets.map(([lo,hi])=>votes.filter(v=>v>=lo&&v<=hi).length);
+    const max = Math.max(...counts)||1;
+    html += `<div style="border:1.5px solid ${isActive?'var(--theme-a)':'var(--border)'};border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--surface-card);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${isActive?'<span style="background:var(--theme-a);color:#fff;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;">현재</span>':''}
+          <span style="font-weight:900;">Q${idx+1}. ${escapeHtml(it.title||'')}</span>
+        </div>
+        <span style="font-size:24px;font-weight:900;color:var(--theme-a);">${avg??'—'}<span style="font-size:12px;color:var(--muted);">/100</span></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;"><span>${escapeHtml(it.min||'낮음')}</span><span>${escapeHtml(it.max||'높음')}</span></div>
+      <div style="height:10px;background:var(--off2);border-radius:5px;overflow:hidden;margin-bottom:12px;">${avg!==null?`<div style="width:${avg}%;height:100%;background:var(--theme-g);border-radius:5px;"></div>`:''}</div>
+      ${labels.map((l,i)=>`<div style="margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:2px;"><span>${l}</span><span>${counts[i]}명</span></div>
+        <div style="height:6px;background:var(--off2);border-radius:3px;overflow:hidden;"><div style="width:${Math.round(counts[i]/max*100)}%;height:100%;background:var(--theme-g);border-radius:3px;"></div></div>
+      </div>`).join('')}
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">${votes.length}명 응답</div>
+    </div>`;
+  });
+
+  const conclusion = allVotes.length===0 ? '아직 응답 데이터가 없어요.' :
+    (overallAvg>=75) ? `전반적으로 높은 점수(${overallAvg}/100)를 기록했어요. 참여자들의 반응이 매우 긍정적이에요! 🎉` :
+    (overallAvg>=50) ? `평균 이상(${overallAvg}/100)의 결과를 보여요. 전반적으로 양호합니다.` :
+    `다소 낮은 점수(${overallAvg}/100)가 기록됐어요. 개선이 필요한 부분을 확인해보세요.`;
+
+  html += `<div style="background:var(--off2);border-radius:14px;padding:14px 16px;margin-top:4px;">
+    <div style="font-size:12px;font-weight:900;color:var(--muted);margin-bottom:6px;">💡 종합 결론</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.6;">${conclusion}</div>
+  </div>`;
+
+  box.innerHTML = html;
+  ov.style.display = 'flex';
+}
 
 // ============================================================
 //   QR CODE GENERATOR (순수 JS, 외부 라이브러리 없음)
@@ -4112,16 +4462,38 @@ function updateParticipantView(act) {
       <div id="pRatingSubmitArea"></div>`;
   } else if (act === 'slider') {
     pTitle.textContent = '슬라이더 응답';
-    const minLbl = document.getElementById('sliderMinLbl')?.textContent || '낮음';
-    const maxLbl = document.getElementById('sliderMaxLbl')?.textContent || '높음';
-    pContent.innerHTML = `
-      <div style="margin-bottom:20px;font-size:13px;color:var(--muted);text-align:center;">슬라이더를 움직여 의견을 표현해 주세요</div>
-      <input type="range" min="0" max="100" value="50" id="pSlider" style="width:100%;accent-color:var(--theme-a);" oninput="document.getElementById('pSliderVal').textContent=this.value">
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px;">
-        <span>${minLbl}</span><span id="pSliderVal" style="font-weight:700;color:var(--theme-a);">50</span><span>${maxLbl}</span>
-      </div>
-      ${submitBtn('제출하기', 'submitParticipantSlider()')}`;
-  } else {
+    if (db && roomCode) {
+      // Firebase에서 활성 슬라이더 문항 읽기
+      Promise.all([
+        db.ref(`sessions/${roomCode}/sliderActiveId`).once('value'),
+      ]).then(([aidSnap]) => {
+        const aid = aidSnap.val();
+        if (!aid) {
+          pContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);">발표자가 문항을 전송하면 나타나요.</div>';
+          return;
+        }
+        db.ref(`sessions/${roomCode}/sliderItems/${aid}`).once('value').then(snap => {
+          const it = snap.val() || {};
+          pTitle.textContent = it.title || '슬라이더 응답';
+          pContent.innerHTML = `
+            <div style="margin-bottom:16px;font-size:13px;color:var(--muted);text-align:center;">슬라이더를 움직여 의견을 표현한 뒤 제출해 주세요</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;">
+              <span>${escapeHtml(it.min||'낮음')}</span><span>${escapeHtml(it.max||'높음')}</span>
+            </div>
+            <input type="range" min="0" max="100" value="50" id="pSlider" style="width:100%;accent-color:var(--theme-a);" oninput="document.getElementById('pSliderVal').textContent=this.value">
+            <div style="text-align:center;margin-top:8px;font-size:22px;font-weight:900;color:var(--theme-a);" id="pSliderVal">50</div>
+            ${submitBtn('제출하기', `submitParticipantSlider('${aid}')`)}`;
+        });
+      });
+    } else {
+      const minLbl = '낮음'; const maxLbl = '높음';
+      pContent.innerHTML = `
+        <div style="margin-bottom:16px;font-size:13px;color:var(--muted);text-align:center;">슬라이더를 움직여 의견을 표현해 주세요</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;"><span>${minLbl}</span><span>${maxLbl}</span></div>
+        <input type="range" min="0" max="100" value="50" id="pSlider" style="width:100%;accent-color:var(--theme-a);" oninput="document.getElementById('pSliderVal').textContent=this.value">
+        <div style="text-align:center;margin-top:8px;font-size:22px;font-weight:900;color:var(--theme-a);" id="pSliderVal">50</div>
+        ${submitBtn('제출하기', "submitParticipantSlider(null)")}`;
+    }
     pTitle.textContent = '잠시만 기다려 주세요';
     pContent.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px;">발표자가 활동을 시작하면 여기에 표시됩니다.</div>';
   }
@@ -4652,18 +5024,20 @@ function renderParticipantNames() {
 }
 
 // ── 참여자 슬라이더 제출 ──
-async function submitParticipantSlider() {
+async function submitParticipantSlider(itemId) {
   const slider = document.getElementById('pSlider');
   const v = parseInt(slider?.value || 50);
+  const id = itemId || activeSliderVotesId || 'sl1';
   if (db && roomCode) {
-    await db.ref(`sessions/${roomCode}/slider`).transaction(arr => {
+    await db.ref(`sessions/${roomCode}/sliderVotes/${id}`).transaction(arr => {
       const a = Array.isArray(arr) ? arr : [];
       return a.concat([v]);
     });
+    await db.ref(`sessions/${roomCode}/responses`).transaction(n => (n||0)+1);
   }
   pMyResponses.push({type:'슬라이더',content:v+'점',time:new Date().toLocaleTimeString()});
   renderMyResponses();
-  showSubmitSuccess('슬라이더 응답이 제출됐어요!');
+  showSubmitSuccess(`슬라이더 응답 제출 완료! (${v}점) 🎚️`);
 }
 
 // ── 참여자 만족도 제출 ──
