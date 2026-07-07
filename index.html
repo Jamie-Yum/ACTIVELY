@@ -6,37 +6,18 @@
 <title>ACTIVELY — 실시간 청중 참여 플랫폼</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- ✅ Firebase SDK (v9 compat mode) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- ✅ Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
 <script>
 // ============================================================
-//  🔥 FIREBASE 설정
-//  Firebase 콘솔(console.firebase.google.com)에서
-//  프로젝트 생성 후 아래 값을 교체하세요.
+//  🟢 SUPABASE 설정
 // ============================================================
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyARGGo-suJzirH05rzHBoaAnuFwJ9ktqBI",
-  authDomain: "actively-9933.firebaseapp.com",
-  databaseURL: "https://actively-9933-default-rtdb.firebaseio.com",
-  projectId: "actively-9933",
-  storageBucket: "actively-9933.firebasestorage.app",
-  messagingSenderId: "168605815360",
-  appId: "1:168605815360:web:cb9ab26ccad9acf22a85a5",
-  measurementId: "G-VSJ273RTNC"
-};
+const SUPABASE_URL = 'https://dvlrzbckneucpvlacdll.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bHJ6YmNrbmV1Y3B2bGFjZGxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODE0OTUsImV4cCI6MjA5MDU1NzQ5NX0.ofzGfyjndiT-FAIcG9TCFtUSXsagTBYOnhsP91vx0sE';
 
-// ✅ 필수 값 존재 여부로 체크 (문자열 'YOUR_' 체크보다 안전)
-const FIREBASE_READY =
-  !!FIREBASE_CONFIG.apiKey &&
-  !!FIREBASE_CONFIG.projectId &&
-  !!FIREBASE_CONFIG.databaseURL;
-
-// ✅ initializeApp는 1번만
-if (FIREBASE_READY && !(firebase.apps && firebase.apps.length)) {
-  firebase.initializeApp(FIREBASE_CONFIG);
-}
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const FIREBASE_READY = !!SUPABASE_URL && !!SUPABASE_ANON;
 </script>
 <style>
 /* ============================================================
@@ -1070,33 +1051,6 @@ body.ui-vivid .bar-fill { background: var(--theme-g); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
-/* ── Firebase Setup Banner ── */
-#firebase-banner {
-  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-  background: #1a1200; color: #fff;
-  border: 1px solid #ff9500;
-  border-radius: 12px;
-  padding: 12px 20px;
-  display: flex; align-items: center; gap: 12px;
-  font-size: 13px; font-weight: 500;
-  z-index: 9999;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  max-width: 560px; width: calc(100% - 32px);
-  animation: slideUp 0.4s ease;
-}
-@keyframes slideUp {
-  from { opacity:0; transform: translateX(-50%) translateY(20px); }
-  to   { opacity:1; transform: translateX(-50%) translateY(0); }
-}
-#firebase-banner .fb-icon { font-size: 22px; flex-shrink:0; }
-#firebase-banner .fb-text { flex:1; line-height:1.4; }
-#firebase-banner .fb-text strong { color: #ff9500; }
-#firebase-banner .fb-close {
-  background: rgba(255,149,0,0.15); border: 1px solid rgba(255,149,0,0.3);
-  color: #ff9500; padding: 4px 12px; border-radius: 6px;
-  font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
-}
-#firebase-banner .fb-close:hover { background: rgba(255,149,0,0.25); }
 
 /* ── Firebase connection status dot ── */
 .fb-status {
@@ -1373,7 +1327,7 @@ body.ui-dark #screen-participant { background: var(--off); }
     </div>
     <div class="nav-right">
       <div class="live-badge"><div class="live-dot-red"></div> LIVE</div>
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)" title="Firebase 연결 상태">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)" title="실시간 연결 상태">
         <div class="fb-status" id="fbStatusDot"></div>
         <span id="fbStatusLabel">데모 모드</span>
       </div>
@@ -1974,17 +1928,6 @@ body.ui-dark #screen-participant { background: var(--off); }
   </div>
 </div>
 
-<!-- Firebase setup banner -->
-
-<div id="firebase-banner" style="display:none">
-  <span class="fb-icon">🔥</span>
-  <div class="fb-text">
-    <strong>Firebase 미설정 — 데모 모드로 실행 중</strong><br>
-    실제 실시간 다중 사용자 기능을 쓰려면 Firebase 설정이 필요합니다. <strong>SETUP_GUIDE.md</strong> 참고
-  </div>
-  <button class="fb-close" onclick="document.getElementById('firebase-banner').style.display='none'">닫기</button>
-</div>
-
 <script>
 // ============================================================
 //   STATE
@@ -1997,10 +1940,9 @@ let totalQuestions = 0;
 let isHost = false;
 let currentUiMode = 'light';
 
-// Firebase DB reference (null if not configured)
-let db = null;
+// Supabase 기반 DB reference (Firebase RTDB API 호환 shim)
 let fbListeners = [];
-if (FIREBASE_READY) { db = firebase.database(); }
+const db = { ref: dbRefShim };
 
 const ctxConfig = {
   edu: { label: '🎓 강의/교육' },
@@ -2076,7 +2018,383 @@ let quizIdx=0, quizScore=0, quizAnswered=false;
 let ratings=[], sliderResponses=[];
 
 // ============================================================
-//   FIREBASE HELPERS
+//   SUPABASE 호환 엔진
+//   (Firebase Realtime DB의 db.ref(path).set/update/remove/once/on/off/transaction/push
+//    호출부를 그대로 두고, 내부 구현만 Supabase 테이블/Realtime으로 대체)
+// ============================================================
+const ACTV_TABLES = ['actv_sessions','actv_nicknames','actv_polls','actv_wordcloud','actv_qa','actv_quiz','actv_quiz_answers','actv_rating_items','actv_rating_votes','actv_slider_items','actv_slider_votes','actv_postits'];
+const _roomChannels = new Map(); // room -> { channel, connectedCbs:Set, tableListeners:Map<table,Set<fn>>, byPath:Map<sub,Set<{event,cb,detach}>> }
+
+function _snap(value, key) { return { val: () => value, exists: () => value !== null && value !== undefined, key: key ?? null }; }
+
+function _getRoom(room) {
+  let rc = _roomChannels.get(room);
+  if (rc) return rc;
+  rc = { channel: null, connectedCbs: new Set(), tableListeners: new Map(), byPath: new Map() };
+  const ch = _sb.channel('actively:' + room);
+  ACTV_TABLES.forEach(t => {
+    ch.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: 'room_code=eq.' + room }, payload => {
+      const set = rc.tableListeners.get(t);
+      if (set) set.forEach(fn => { try { fn(payload); } catch (e) { console.warn(e); } });
+    });
+  });
+  ch.subscribe(status => {
+    const ok = status === 'SUBSCRIBED';
+    rc.connectedCbs.forEach(cb => { try { cb(ok); } catch (e) {} });
+  });
+  rc.channel = ch;
+  _roomChannels.set(room, rc);
+  return rc;
+}
+
+function _watchTable(room, table, fn) {
+  const rc = _getRoom(room);
+  if (!rc.tableListeners.has(table)) rc.tableListeners.set(table, new Set());
+  rc.tableListeners.get(table).add(fn);
+  return () => { const s = rc.tableListeners.get(table); if (s) s.delete(fn); };
+}
+
+function _registerPathListener(room, sub, event, cb, detach) {
+  const rc = _getRoom(room);
+  if (!rc.byPath.has(sub)) rc.byPath.set(sub, new Set());
+  const rec = { event, cb, detach };
+  rc.byPath.get(sub).add(rec);
+  return rec;
+}
+
+function _unregisterPathListeners(room, sub, event, cb) {
+  const rc = _roomChannels.get(room);
+  if (!rc) return;
+  const set = rc.byPath.get(sub);
+  if (!set) return;
+  set.forEach(rec => {
+    if (event && rec.event !== event) return;
+    if (cb && rec.cb !== cb) return;
+    rec.detach();
+    set.delete(rec);
+  });
+}
+
+function _parsePath(path) {
+  if (path === '.info/connected') return { kind: 'connected' };
+  if (path.startsWith('config/')) return { kind: 'config', key: path.slice(7) };
+  const m = path.match(/^sessions\/([^/]+)\/?(.*)$/);
+  if (m) return { kind: 'session', room: m[1], sub: m[2] || '' };
+  return { kind: 'unknown' };
+}
+
+function _tableForSub(sub) {
+  if (sub.startsWith('nicknames')) return 'actv_nicknames';
+  if (sub.startsWith('poll')) return 'actv_polls';
+  if (sub === 'wordcloud' || sub.startsWith('wordcloud/')) return 'actv_wordcloud';
+  if (sub === 'qa' || sub.startsWith('qa/')) return 'actv_qa';
+  if (sub.startsWith('quizAnswers')) return 'actv_quiz_answers';
+  if (sub.startsWith('quiz')) return 'actv_quiz';
+  if (sub === 'postits') return 'actv_postits';
+  if (sub.startsWith('ratingItems')) return 'actv_rating_items';
+  if (sub.startsWith('ratingVotes')) return 'actv_rating_votes';
+  if (sub.startsWith('sliderItems')) return 'actv_slider_items';
+  if (sub.startsWith('sliderVotes')) return 'actv_slider_votes';
+  return 'actv_sessions';
+}
+
+// ---- 읽기 ----
+async function _readSession(room) { const { data } = await _sb.from('actv_sessions').select('*').eq('room_code', room).maybeSingle(); return data; }
+async function _readPoll(room) {
+  const { data } = await _sb.from('actv_polls').select('*').eq('room_code', room).maybeSingle();
+  if (!data) return null;
+  return { live: data.live, q: data.question, opts: data.options || [], votes: data.votes || {} };
+}
+async function _readWordcloud(room) {
+  const { data } = await _sb.from('actv_wordcloud').select('word,count').eq('room_code', room);
+  const out = {}; (data || []).forEach(r => out[r.word] = r.count); return out;
+}
+async function _readNicknames(room) {
+  const { data } = await _sb.from('actv_nicknames').select('participant_id,nickname').eq('room_code', room);
+  const out = {}; (data || []).forEach(r => out[r.participant_id] = r.nickname); return out;
+}
+async function _readQuiz(room) {
+  const { data } = await _sb.from('actv_quiz').select('*').eq('room_code', room).maybeSingle();
+  if (!data) return null;
+  return { questions: data.questions || [], started: data.started, timerSec: data.timer_sec, currentQ: data.current_q, ts: data.ts ? new Date(data.ts).getTime() : null };
+}
+async function _readQuizAnswers(room) {
+  const { data } = await _sb.from('actv_quiz_answers').select('*').eq('room_code', room);
+  const out = {};
+  (data || []).forEach(r => { out[r.client_id] = { nickname: r.nickname, qIdx: r.q_idx, correct: r.correct, chosen: r.chosen, shortAns: r.short_ans, ts: r.ts ? new Date(r.ts).getTime() : null }; });
+  return out;
+}
+async function _readRatingItems(room) {
+  const { data } = await _sb.from('actv_rating_items').select('*').eq('room_code', room);
+  const out = {}; (data || []).forEach(r => out[r.id] = { title: r.title, icon: r.icon, order: r.order_idx }); return out;
+}
+async function _readRatingVotes(room, id) {
+  const { data } = await _sb.from('actv_rating_votes').select('score').eq('room_code', room).eq('item_id', id);
+  return (data || []).map(r => r.score);
+}
+async function _readAllRatingVotes(room) {
+  const { data } = await _sb.from('actv_rating_votes').select('item_id,score').eq('room_code', room);
+  const out = {}; (data || []).forEach(r => { (out[r.item_id] || (out[r.item_id] = [])).push(r.score); }); return out;
+}
+async function _readSliderItems(room) {
+  const { data } = await _sb.from('actv_slider_items').select('*').eq('room_code', room);
+  const out = {}; (data || []).forEach(r => out[r.id] = { title: r.title, min: r.min_label, max: r.max_label, order: r.order_idx }); return out;
+}
+async function _readSliderVotes(room, id) {
+  const { data } = await _sb.from('actv_slider_votes').select('value').eq('room_code', room).eq('item_id', id);
+  return (data || []).map(r => r.value);
+}
+async function _readAllSliderVotes(room) {
+  const { data } = await _sb.from('actv_slider_votes').select('item_id,value').eq('room_code', room);
+  const out = {}; (data || []).forEach(r => { (out[r.item_id] || (out[r.item_id] = [])).push(r.value); }); return out;
+}
+async function _readPostits(room) {
+  const { data } = await _sb.from('actv_postits').select('*').eq('room_code', room);
+  const out = {}; (data || []).forEach(r => out[r.id] = { text: r.text, nickname: r.nickname, ts: r.ts ? new Date(r.ts).getTime() : null }); return out;
+}
+function _qaRowToVal(r) { return { q: r.question, author: r.author, answered: r.answered, votes: r.votes, ts: r.ts ? new Date(r.ts).getTime() : null }; }
+async function _readQa(room) {
+  const { data } = await _sb.from('actv_qa').select('*').eq('room_code', room).order('ts', { ascending: true });
+  const out = {}; (data || []).forEach(r => out[r.id] = _qaRowToVal(r)); return out;
+}
+
+async function _readPath(room, sub) {
+  if (sub === '') return await _readSession(room);
+  if (sub === 'title') return (await _readSession(room))?.title ?? null;
+  if (sub === 'participants') return (await _readSession(room))?.participants ?? 0;
+  if (sub === 'responses') return (await _readSession(room))?.responses ?? 0;
+  if (sub === 'activeActivity') return (await _readSession(room))?.active_activity ?? null;
+  if (sub === 'activityShare') return (await _readSession(room))?.activity_share ?? null;
+  if (sub === 'qaShow') return (await _readSession(room))?.qa_show ?? null;
+  if (sub === 'postitQ') return (await _readSession(room))?.postit_q ?? null;
+  if (sub === 'sliderActiveId') return (await _readSession(room))?.slider_active_id ?? null;
+  if (sub === 'ratingActiveId') return (await _readSession(room))?.rating_active_id ?? null;
+  if (sub === 'nicknames') return await _readNicknames(room);
+  let m;
+  if ((m = sub.match(/^nicknames\/(.+)$/))) { const map = await _readNicknames(room); return map[m[1]] ?? null; }
+  if (sub === 'poll') return await _readPoll(room);
+  if (sub === 'poll/votes') { const p = await _readPoll(room); return p ? p.votes : null; }
+  if (sub === 'poll/live') { const p = await _readPoll(room); return p ? p.live : null; }
+  if (sub === 'wordcloud') return await _readWordcloud(room);
+  if (sub === 'qa') return await _readQa(room);
+  if (sub === 'quiz') return await _readQuiz(room);
+  if (sub === 'quiz/currentQ') { const q = await _readQuiz(room); return q ? q.currentQ : null; }
+  if (sub === 'quizAnswers') return await _readQuizAnswers(room);
+  if (sub === 'postits') return await _readPostits(room);
+  if (sub === 'ratingItems') return await _readRatingItems(room);
+  if ((m = sub.match(/^ratingItems\/(.+)$/))) { const map = await _readRatingItems(room); return map[m[1]] ?? null; }
+  if (sub === 'ratingVotes') return await _readAllRatingVotes(room);
+  if ((m = sub.match(/^ratingVotes\/(.+)$/))) return await _readRatingVotes(room, m[1]);
+  if (sub === 'sliderItems') return await _readSliderItems(room);
+  if ((m = sub.match(/^sliderItems\/(.+)$/))) { const map = await _readSliderItems(room); return map[m[1]] ?? null; }
+  if (sub === 'sliderVotes') return await _readAllSliderVotes(room);
+  if ((m = sub.match(/^sliderVotes\/(.+)$/))) return await _readSliderVotes(room, m[1]);
+  return null;
+}
+
+// ---- 쓰기 ----
+async function _writeSet(room, sub, value) {
+  let m;
+  if (sub === '') {
+    await _sb.from('actv_sessions').upsert({
+      room_code: room, ctx: value.ctx, title: value.title || '', host_key: value.hostKey || '',
+      active: value.active !== undefined ? value.active : true,
+      active_activity: value.activeActivity || null,
+      participants: value.participants || 0, responses: value.responses || 0,
+      rating_active_id: value.ratingActiveId || null,
+    });
+    if (value.poll) await _sb.from('actv_polls').upsert({ room_code: room, live: !!value.poll.live, question: value.poll.q || '', options: value.poll.opts || [], votes: value.poll.votes || {} });
+    if (value.ratingItems) {
+      const rows = Object.entries(value.ratingItems).map(([id, it]) => ({ room_code: room, id, title: it.title, icon: it.icon, order_idx: it.order || 0 }));
+      if (rows.length) await _sb.from('actv_rating_items').upsert(rows);
+    }
+    return;
+  }
+  if (sub === 'title') { await _sb.from('actv_sessions').update({ title: value }).eq('room_code', room); return; }
+  if (sub === 'activeActivity') { await _sb.from('actv_sessions').update({ active_activity: value }).eq('room_code', room); return; }
+  if (sub === 'activityShare') { await _sb.from('actv_sessions').update({ activity_share: value }).eq('room_code', room); return; }
+  if (sub === 'qaShow') { await _sb.from('actv_sessions').update({ qa_show: value }).eq('room_code', room); return; }
+  if (sub === 'postitQ') { await _sb.from('actv_sessions').update({ postit_q: value }).eq('room_code', room); return; }
+  if (sub === 'sliderActiveId') { await _sb.from('actv_sessions').update({ slider_active_id: value }).eq('room_code', room); return; }
+  if (sub === 'ratingActiveId') { await _sb.from('actv_sessions').update({ rating_active_id: value }).eq('room_code', room); return; }
+  if ((m = sub.match(/^nicknames\/(.+)$/))) { await _sb.from('actv_nicknames').upsert({ room_code: room, participant_id: m[1], nickname: value }); return; }
+  if (sub === 'poll') { await _sb.from('actv_polls').upsert({ room_code: room, live: !!value.live, question: value.q || '', options: value.opts || [], votes: value.votes || {} }); return; }
+  if (sub === 'poll/votes') { await _sb.from('actv_polls').update({ votes: value }).eq('room_code', room); return; }
+  if (sub === 'poll/live') { await _sb.from('actv_polls').update({ live: value }).eq('room_code', room); return; }
+  if (sub === 'wordcloud') {
+    await _sb.from('actv_wordcloud').delete().eq('room_code', room);
+    if (value) { const rows = Object.entries(value).map(([word, count]) => ({ room_code: room, word, count })); if (rows.length) await _sb.from('actv_wordcloud').insert(rows); }
+    return;
+  }
+  if (sub === 'quiz') { await _sb.from('actv_quiz').upsert({ room_code: room, questions: value.questions || [], started: !!value.started, timer_sec: value.timerSec, current_q: value.currentQ ?? 0, ts: new Date(value.ts || Date.now()).toISOString() }); return; }
+  if (sub === 'quiz/currentQ') { await _sb.from('actv_quiz').update({ current_q: value }).eq('room_code', room); return; }
+  if ((m = sub.match(/^qa\/(.+)\/answered$/))) { await _sb.from('actv_qa').update({ answered: value }).eq('room_code', room).eq('id', m[1]); return; }
+  if ((m = sub.match(/^quizAnswers\/(.+)$/))) { await _sb.from('actv_quiz_answers').upsert({ room_code: room, client_id: m[1], nickname: value.nickname, q_idx: value.qIdx, correct: value.correct, chosen: value.chosen, short_ans: value.shortAns, ts: new Date(value.ts || Date.now()).toISOString() }); return; }
+  if (sub === 'ratingItems') {
+    const rows = Object.entries(value || {}).map(([id, it]) => ({ room_code: room, id, title: it.title, icon: it.icon, order_idx: it.order || 0 }));
+    if (rows.length) await _sb.from('actv_rating_items').upsert(rows);
+    return;
+  }
+  if ((m = sub.match(/^ratingItems\/(.+)$/))) { await _sb.from('actv_rating_items').upsert({ room_code: room, id: m[1], title: value.title, icon: value.icon, order_idx: value.order || 0 }); return; }
+  if (sub === 'ratingVotes') {
+    await _sb.from('actv_rating_votes').delete().eq('room_code', room);
+    const rows = [];
+    Object.entries(value || {}).forEach(([id, arr]) => (arr || []).forEach(score => rows.push({ room_code: room, item_id: id, score })));
+    if (rows.length) await _sb.from('actv_rating_votes').insert(rows);
+    return;
+  }
+  if ((m = sub.match(/^ratingVotes\/(.+)$/))) {
+    await _sb.from('actv_rating_votes').delete().eq('room_code', room).eq('item_id', m[1]);
+    const arr = value || [];
+    if (arr.length) await _sb.from('actv_rating_votes').insert(arr.map(score => ({ room_code: room, item_id: m[1], score })));
+    return;
+  }
+  if (sub === 'sliderItems') {
+    const rows = Object.entries(value || {}).map(([id, it]) => ({ room_code: room, id, title: it.title, min_label: it.min, max_label: it.max, order_idx: it.order || 0 }));
+    if (rows.length) await _sb.from('actv_slider_items').upsert(rows);
+    return;
+  }
+  if ((m = sub.match(/^sliderItems\/(.+)$/))) { await _sb.from('actv_slider_items').upsert({ room_code: room, id: m[1], title: value.title, min_label: value.min, max_label: value.max, order_idx: value.order || 0 }); return; }
+  if (sub === 'sliderVotes') {
+    await _sb.from('actv_slider_votes').delete().eq('room_code', room);
+    const rows = [];
+    Object.entries(value || {}).forEach(([id, arr]) => (arr || []).forEach(v => rows.push({ room_code: room, item_id: id, value: v })));
+    if (rows.length) await _sb.from('actv_slider_votes').insert(rows);
+    return;
+  }
+  if ((m = sub.match(/^sliderVotes\/(.+)$/))) {
+    await _sb.from('actv_slider_votes').delete().eq('room_code', room).eq('item_id', m[1]);
+    const arr = value || [];
+    if (arr.length) await _sb.from('actv_slider_votes').insert(arr.map(v => ({ room_code: room, item_id: m[1], value: v })));
+    return;
+  }
+}
+
+async function _writeUpdate(room, sub, patch) {
+  let m;
+  if ((m = sub.match(/^ratingItems\/(.+)$/))) {
+    const upd = {}; if ('title' in patch) upd.title = patch.title; if ('icon' in patch) upd.icon = patch.icon; if ('order' in patch) upd.order_idx = patch.order;
+    await _sb.from('actv_rating_items').update(upd).eq('room_code', room).eq('id', m[1]); return;
+  }
+  if ((m = sub.match(/^sliderItems\/(.+)$/))) {
+    const upd = {}; if ('title' in patch) upd.title = patch.title; if ('min' in patch) upd.min_label = patch.min; if ('max' in patch) upd.max_label = patch.max; if ('order' in patch) upd.order_idx = patch.order;
+    await _sb.from('actv_slider_items').update(upd).eq('room_code', room).eq('id', m[1]); return;
+  }
+}
+
+async function _writeRemove(room, sub) {
+  let m;
+  if (sub === 'activityShare') { await _sb.from('actv_sessions').update({ activity_share: null }).eq('room_code', room); return; }
+  if (sub === 'quizAnswers') { await _sb.from('actv_quiz_answers').delete().eq('room_code', room); return; }
+  if (sub === 'postits') { await _sb.from('actv_postits').delete().eq('room_code', room); return; }
+  if ((m = sub.match(/^ratingItems\/(.+)$/))) { await _sb.from('actv_rating_items').delete().eq('room_code', room).eq('id', m[1]); return; }
+  if ((m = sub.match(/^ratingVotes\/(.+)$/))) { await _sb.from('actv_rating_votes').delete().eq('room_code', room).eq('item_id', m[1]); return; }
+  if ((m = sub.match(/^sliderItems\/(.+)$/))) { await _sb.from('actv_slider_items').delete().eq('room_code', room).eq('id', m[1]); return; }
+  if ((m = sub.match(/^sliderVotes\/(.+)$/))) { await _sb.from('actv_slider_votes').delete().eq('room_code', room).eq('item_id', m[1]); return; }
+}
+
+async function _writeTransaction(room, sub, fn) {
+  let m;
+  if (sub === 'participants') { await _sb.rpc('actv_incr_participants', { p_room: room }); return true; }
+  if (sub === 'responses') { await _sb.rpc('actv_incr_responses', { p_room: room }); return true; }
+  if ((m = sub.match(/^poll\/votes\/(\d+)$/))) { await _sb.rpc('actv_incr_poll_vote', { p_room: room, p_idx: parseInt(m[1], 10) }); return true; }
+  if ((m = sub.match(/^wordcloud\/(.+)$/))) { await _sb.rpc('actv_incr_wordcloud', { p_room: room, p_word: m[1] }); return true; }
+  if ((m = sub.match(/^ratingVotes\/(.+)$/))) {
+    const add = fn([]) || [];
+    if (add.length) await _sb.from('actv_rating_votes').insert(add.map(score => ({ room_code: room, item_id: m[1], score })));
+    return true;
+  }
+  if ((m = sub.match(/^sliderVotes\/(.+)$/))) {
+    const add = fn([]) || [];
+    if (add.length) await _sb.from('actv_slider_votes').insert(add.map(value => ({ room_code: room, item_id: m[1], value })));
+    return true;
+  }
+  return false;
+}
+
+function _writePush(room, sub, value) {
+  const id = (crypto.randomUUID ? crypto.randomUUID() : ('id_' + Date.now() + Math.random().toString(36).slice(2, 10)));
+  if (sub === 'qa') {
+    return _sb.from('actv_qa').insert({ id, room_code: room, question: value.q, author: value.author || value.nick || '익명', answered: !!value.answered, votes: value.votes || 0, ts: new Date(value.ts || value.timestamp || Date.now()).toISOString() }).then(() => ({ key: id }));
+  }
+  if (sub === 'postits') {
+    return _sb.from('actv_postits').insert({ id, room_code: room, text: value.text, nickname: value.nickname, ts: new Date(value.ts || Date.now()).toISOString() }).then(() => ({ key: id }));
+  }
+  return null;
+}
+
+// ---- db.ref(path) shim 본체 ----
+function dbRefShim(path) {
+  const parsed = _parsePath(path);
+
+  if (parsed.kind === 'connected') {
+    return {
+      on(event, cb) {
+        const room = roomCode || null;
+        if (!room) { cb({ val: () => true }); return; }
+        const rc = _getRoom(room);
+        rc.connectedCbs.add(cb);
+        cb({ val: () => true });
+      },
+      off() {},
+    };
+  }
+
+  if (parsed.kind === 'config') {
+    const key = parsed.key;
+    return {
+      async once() {
+        const { data } = await _sb.from('actv_admin_config').select('value').eq('key', key).maybeSingle();
+        return _snap(data ? data.value : null);
+      },
+      async set(value) { await _sb.from('actv_admin_config').upsert({ key, value }); },
+    };
+  }
+
+  if (parsed.kind !== 'session') {
+    return { async once() { return _snap(null); }, async set() {}, async update() {}, async remove() {}, on() {}, off() {}, async transaction() { return false; }, push() { return null; } };
+  }
+
+  const { room, sub } = parsed;
+
+  return {
+    async set(value) { await _writeSet(room, sub, value); },
+    async update(patch) { await _writeUpdate(room, sub, patch); },
+    async remove() { await _writeRemove(room, sub); },
+    async transaction(fn) { return await _writeTransaction(room, sub, fn); },
+    push(value) { return _writePush(room, sub, value); },
+    async once() {
+      const v = await _readPath(room, sub);
+      return _snap(v);
+    },
+    on(event, cb) {
+      if (sub === 'qa' && (event === 'child_added' || event === 'child_changed')) {
+        if (event === 'child_added') {
+          _readQa(room).then(map => { Object.entries(map).forEach(([id, val]) => cb(_snap(val, id))); });
+          const detach = _watchTable(room, 'actv_qa', payload => {
+            if (payload.eventType === 'INSERT') cb(_snap(_qaRowToVal(payload.new), payload.new.id));
+          });
+          _registerPathListener(room, sub, event, cb, detach);
+        } else {
+          const detach = _watchTable(room, 'actv_qa', payload => {
+            if (payload.eventType === 'UPDATE') cb(_snap(_qaRowToVal(payload.new), payload.new.id));
+          });
+          _registerPathListener(room, sub, event, cb, detach);
+        }
+        return;
+      }
+      const table = _tableForSub(sub);
+      const refresh = () => _readPath(room, sub).then(v => cb(_snap(v)));
+      refresh();
+      const detach = _watchTable(room, table, refresh);
+      _registerPathListener(room, sub, event, cb, detach);
+    },
+    off(event, cb) { _unregisterPathListeners(room, sub, event, cb); },
+  };
+}
+
+// ============================================================
+//   FIREBASE 스타일 헬퍼 (내부적으로 dbRefShim 사용, 시그니처 유지)
 // ============================================================
 function fbPath(path) { return `sessions/${roomCode}/${path}`; }
 
@@ -2184,7 +2502,7 @@ async function initHostSession(c, initialAct) {
 
     db.ref('.info/connected').on('value', s=>setFbStatus(s.val()?'connected':'offline'));
     setFbStatus('connected');
-    addFeed('🔥 Firebase 실시간 연결됨', '#22c55e');
+    addFeed('🔥 실시간 연결됨', '#22c55e');
   } else {
     setFbStatus('demo');
     setTimeout(()=>{ totalParticipants=Math.floor(Math.random()*20)+5; updateStats(); addFeed(`세션 시작 (데모): ${roomCode}`,'var(--theme-a)'); addFeed(`${totalParticipants}명 입장`,'#22a05a'); },600);
@@ -2749,7 +3067,7 @@ async function joinSession() {
     if(ok) { setTheme(ctx); document.getElementById('pContextLabel').textContent=ctxConfig[ctx]?.label||'세션'; showScreen('participant'); }
     else { input.style.borderColor='#e05050'; input.placeholder='코드를 찾을 수 없어요'; setTimeout(()=>{input.style.borderColor='';input.placeholder='ABC-123';},2000); }
   } else {
-    alert(`코드 "${code}" — Firebase 미설정 상태입니다.\n\nSETUP_GUIDE.md 를 참고해 Firebase를 연결해 주세요.`);
+    alert(`코드 "${code}" — 서버 연결이 설정되지 않았습니다.`);
   }
 }
 
@@ -3620,7 +3938,7 @@ async function showQuizResults() {
   document.getElementById('quiz-live-card').style.display = 'none';
   document.getElementById('quiz-result-card').style.display = '';
   const body = document.getElementById('quizResultBody'); if (!body) return;
-  if (!db || !roomCode) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Firebase 연결 필요</div>'; return; }
+  if (!db || !roomCode) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">세션 연결 필요</div>'; return; }
   body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">결과 집계 중...</div>';
   const snap = await db.ref(fbPath('quizAnswers')).once('value');
   const data = snap.val() || {};
@@ -4934,7 +5252,7 @@ async function submitQuickQA(){
       localStorage.setItem(key, JSON.stringify(arr.slice(-50)));
     }catch(e){}
     if(input) input.value='';
-    try{ alert('데모 모드라 이 기기에서만 저장됐어요. (Firebase 연결 시 실시간 전송)'); }catch(e){}
+    try{ alert('데모 모드라 이 기기에서만 저장됐어요. (연결 시 실시간 전송)'); }catch(e){}
     return;
   }
 
@@ -5223,12 +5541,12 @@ function refreshUnifiedHistory() {
   ).join('');
 }
 
-// ── 관리자 PIN (Firebase 저장) ──
+// ── 관리자 PIN (Supabase 저장) ──
 const FIREBASE_PIN_PATH = 'config/adminPin';
 let _adminVerified = false;
 let _pendingHostArgs = null; // PIN 인증 후 실행할 startAsHost 인자 저장
 
-// Firebase에서 PIN 가져오기
+// Supabase에서 PIN 가져오기
 async function getStoredPin() {
   if (!db) return null;
   try {
@@ -5337,8 +5655,8 @@ async function saveNewAdminPin() {
     return;
   }
 
-  // Firebase에 저장
-  if (!db) { if(err) err.textContent = 'Firebase 연결이 필요해요.'; return; }
+  // Supabase에 저장
+  if (!db) { if(err) err.textContent = '서버 연결이 필요해요.'; return; }
   try {
     await db.ref(FIREBASE_PIN_PATH).set(newVal);
     // 저장 성공 → 자동으로 인증 처리 후 바로 세션 진입
